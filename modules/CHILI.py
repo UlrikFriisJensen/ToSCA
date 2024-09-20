@@ -1,4 +1,4 @@
-### CHILI dataset class
+### Modified CHILI dataset class
 ### Paper: https://doi.org/10.1145/3637528.3671538
 ### Data: https://doi.org/10.17894/ucph.e37b6615-8635-49cf-819d-eae60e781a96
 ### Code: https://github.com/UlrikFriisJensen/CHILI/blob/main/benchmark/dataset_class.py
@@ -96,7 +96,7 @@ class CHILI(Dataset):
         """
         # Download to `self.raw_dir`.
         path = download_url(
-            f"https://sid.erda.dk/share_redirect/h6ktCBGzPF/{self.dataset}.zip",
+            f"https://erda.ku.dk/archives/c9d91863f89c3a7e87201c175ff4b213/Nanostructure_Data/Data_for_MachineLearning/DatasetPaper/{self.dataset}.zip",
             self.raw_dir,
         )
         # Extract zip and delete zip
@@ -208,20 +208,20 @@ class CHILI(Dataset):
                             edge_attr = edge_attr,
                             pos_abs = torch.tensor(h5f["DiscreteParticleGraphs"][key]["AbsoluteCoordinates"][:], dtype=torch.float32),
                             pos_frac=torch.tensor(h5f["DiscreteParticleGraphs"][key]["FractionalCoordinates"][:], dtype=torch.float32),
-
+                            
                             y=dict(
                                 crystal_type=crystal_type,
                                 space_group_symbol=space_group_symbol,
                                 space_group_number=space_group_number,
                                 crystal_system=crystal_system,
                                 crystal_system_number=crystal_system_number,
-                                atomic_species=atomic_species,
+                                atomic_species=atomic_species,#.unsqueeze(0),
                                 n_atomic_species=len(atomic_species),
                                 np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
                                 n_atoms=node_feat.shape[0],
                                 n_bonds=edge_index.shape[1],
 
-                                cell_params=cell_params,
+                                cell_params=cell_params.unsqueeze(0),
                                 unit_cell_x=unit_cell_node_feat,
                                 unit_cell_edge_index=unit_cell_edge_index,
                                 unit_cell_edge_attr=unit_cell_edge_attr,
@@ -231,12 +231,12 @@ class CHILI(Dataset):
                                 unit_cell_n_bonds=unit_cell_edge_index.shape[1],
 
                                 # Scattering data
-                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32),
-                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32),
-                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32),
-                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32),
-                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32),
-                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32),
+                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32).unsqueeze(0),
+                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32).unsqueeze(0),
+                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32).unsqueeze(0),
+                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
                             ),
                         )
 

@@ -1,0 +1,37 @@
+{
+    "experiment_name" : "test_setup",
+    "experiment_description" : "This is a test experiment",
+    "experiment_date" : null,
+    "experiment_start_time" : null,
+    "experiment_end_time" : null,
+    "random_seed" : 42,
+    "start_from_checkpoint" : null,
+    "data" : {
+        "name" : "CHILI-3K",
+        "root" : "./data/",
+        "split_strategy" : "stratified",
+        "stratify_column" : "Crystal type",
+        "split" : {
+            "train" : 0.8,
+            "validation" : 0.1,
+            "test" : 0.1
+            },
+        "batch_size" : 2,
+        "num_workers" : 4
+        },
+    "model" : {
+        "placeholder" : "model"
+    },
+    "training" : {
+        "epochs" : 10,
+        "learning_rate" : 0.001,
+        "optimizer" : "adam",
+        "loss" : "cross_entropy",
+        "metrics" : ["accuracy"],
+        "callbacks" : ["early_stopping", "model_checkpoint"],
+        "early_stopping" : {
+            "patience" : 3,
+            "monitor" : "val_loss"
+        }
+    }
+}
