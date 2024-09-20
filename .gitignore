@@ -163,7 +163,3 @@ cython_debug/
 
 # vscode
 *.code-workspace
-
-# Project specific
-data/
-models/
