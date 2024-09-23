@@ -34,7 +34,7 @@ class GatedConv1d(nn.Module):
 #%% Model
 
 class SCVAE(nn.Module):
-    def __init__(self, latent_dim=128, out_dim=50, gnn_dim=128, gnn_heads=1, gnn_edge_dim=1, scattering_channels=2, scattering_dim=256, scattering_kernel_size=7, scattering_stride=3, scattering_padding=1, decoder_hidden_dim=256):
+    def __init__(self, latent_dim=128, out_dim=50, gnn_dim=64, gnn_heads=1, gnn_edge_dim=1, scattering_channels=2, scattering_dim=256, scattering_kernel_size=7, scattering_stride=3, scattering_padding=1, decoder_hidden_dim=256):
         super(SCVAE, self).__init__()
         self.latent_dim = latent_dim
         self.out_dim = out_dim
@@ -48,34 +48,39 @@ class SCVAE(nn.Module):
         self.scattering_padding = scattering_padding
         self.decoder_hidden_dim = decoder_hidden_dim
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.aggr_list = ['mean', 'max', 'sum', 'std', 'var']
         
         self.graph_encoder_local = pyg_Sequential('x, edge_index, edge_attr', [
-            (GATv2Conv(7, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(7, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim, aggr=self.aggr_list), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim, aggr=self.aggr_list), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
         ])
         
-        self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-            nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-            nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-            nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-            nn.ELU(),
-        ])
+        # self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
+        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+        #     nn.ELU(),
+        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+        #     nn.ELU(),
+        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+        #     nn.ELU(),
+        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+        #     nn.ELU(),
+        # ])
         
         self.linear_graph_encoder = Sequential(
-            nn.Linear(self.latent_dim*self.gnn_heads*6, self.latent_dim*4),
+            nn.Linear(self.latent_dim*self.gnn_heads*len(self.aggr_list)*3, self.latent_dim*16),
+            nn.ELU(),
+            nn.Linear(self.latent_dim*16, self.latent_dim*8),
+            nn.ELU(),
+            nn.Linear(self.latent_dim*8, self.latent_dim*4),
             nn.ELU(),
             nn.Linear(self.latent_dim*4, self.latent_dim*2),
         )
         
-        # self.scattering_encoder = Sequential(
-            
-        # )
+        self.scattering_encoder = Sequential(
+            GatedConv1d(2, )
+        )
         
         # self.local_aggregator = MLPAggregation(
         #     in_channels = self.gnn_dim*self.gnn_heads, 
@@ -84,11 +89,11 @@ class SCVAE(nn.Module):
         #     num_layers = 1
         #     ).to(self.device)
         
-        self.local_aggregator = PowerMeanAggregation(
-            p=1.0,
-            learn=True,
-            channels=1,
-        )
+        # self.local_aggregator = PowerMeanAggregation(
+        #     p=1.0,
+        #     learn=True,
+        #     channels=1,
+        # )
         
         # self.global_aggregator = MLPAggregation(
         #     in_channels = self.gnn_dim*self.gnn_heads, 
@@ -97,11 +102,11 @@ class SCVAE(nn.Module):
         #     num_layers = 1
         #     ).to(self.device)
         
-        self.global_aggregator = PowerMeanAggregation(
-            p=1.0,
-            learn=True,
-            channels=1,
-        )
+        # self.global_aggregator = PowerMeanAggregation(
+        #     p=1.0,
+        #     learn=True,
+        #     channels=1,
+        # )
         
         self.shared_decoder = Sequential(
             nn.Linear(self.latent_dim, self.decoder_hidden_dim),
