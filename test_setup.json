@@ -1,11 +1,11 @@
 {
     "experiment_name" : "test_setup",
     "experiment_description" : "This is a test experiment",
-    "experiment_date" : null,
-    "experiment_start_time" : null,
-    "experiment_end_time" : null,
+    "experiment_start" : null,
+    "experiment_end" : null,
     "random_seed" : 42,
     "start_from_checkpoint" : null,
+    "model_root" : "./models/",
     "data" : {
         "name" : "CHILI-3K",
         "root" : "./data/",
@@ -16,22 +16,16 @@
             "validation" : 0.1,
             "test" : 0.1
             },
-        "batch_size" : 2,
-        "num_workers" : 4
-        },
+        "batch_size" : 5,
+        "num_workers" : 2
+    },
     "model" : {
-        "placeholder" : "model"
+        "latent_dim" : 128,
+        "out_dim" : null
     },
     "training" : {
         "epochs" : 10,
         "learning_rate" : 0.001,
-        "optimizer" : "adam",
-        "loss" : "cross_entropy",
-        "metrics" : ["accuracy"],
-        "callbacks" : ["early_stopping", "model_checkpoint"],
-        "early_stopping" : {
-            "patience" : 3,
-            "monitor" : "val_loss"
-        }
+        "patience" : 3
     }
 }
