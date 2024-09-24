@@ -113,9 +113,11 @@ if __name__ == "__main__":
     loss_fn_cell_parameters = torch.nn.MSELoss()
     loss_fn_cell_positions = torch.nn.MSELoss()
     loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
-    loss_fn_kld = torch.nn.KLDivLoss()
+    # loss_fn_kld = torch.nn.KLDivLoss()
         
     #%% Train model
+    beta = setup_json['training']['beta']
+    
     best_loss = np.inf
     patience = setup_json['training']['patience']
     patience_counter = 0
@@ -123,7 +125,7 @@ if __name__ == "__main__":
     for epoch in range(setup_json['training']['epochs']):
         # Check patience
         if patience_counter >= patience:
-            print(f'Early stopping after {epoch} epochs')
+            print(f'Early stopping after {epoch - 1} epochs')
             break
         # Train model
         model.train()
@@ -134,22 +136,41 @@ if __name__ == "__main__":
             
             # Forward pass
             batch = batch.to(device)
-            # print(batch.is_cuda)
-            # print(next(model.parameters()).is_cuda)
-            cell_parameters, cell_positions, cell_atoms, mean, log_std = model.forward(
+            cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = torch.cat((batch.x, batch.pos_abs), dim=1), 
                 edge_index = batch.edge_index, 
+                scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1),
                 edge_attr = batch.edge_attr, 
                 batch = batch.batch,
             )
+            
+            # print(batch.y.keys())
+            
+            # Assign batch labels to unit cell positions
+            unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+            index_sum = 0
+            for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                index_sum += unit_cell_atoms
+            
+            cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+            cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
 
+            for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
+                cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+                
+            # Reshape atom predictions
+            cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
+            cell_atoms_true = cell_atoms_true.reshape(-1).long()
+            
             # Loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, batch.y['cell_params'].view(-1, 6))
-            loss_cell_positions = 0 # Placeholder
-            loss_cell_atoms = 0 # Placeholder
-            loss_kld = 0 # Placeholder
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
+            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
+            loss_kld = kld.mean()
             
-            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + loss_kld
+            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -166,20 +187,39 @@ if __name__ == "__main__":
         for batch in tqdm(validation_loader, desc='Validation', leave=False):
             # Forward pass
             batch = batch.to(device)
-            cell_parameters, cell_positions, cell_atoms, mean, log_std = model.forward(
+            cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = torch.cat((batch.x, batch.pos_abs), dim=1), 
                 edge_index = batch.edge_index, 
+                scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1),
                 edge_attr = batch.edge_attr, 
                 batch = batch.batch,
             )
-
+            
+            # Assign batch labels to unit cell positions
+            unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+            index_sum = 0
+            for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                index_sum += unit_cell_atoms
+                
+            cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+            cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+            
+            for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
+                cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+            
+            # Reshape atom predictions
+            cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
+            cell_atoms_true = cell_atoms_true.reshape(-1).long()
+            
             # Loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, batch.y['cell_params'].view(-1, 6))
-            loss_cell_positions = 0 # Placeholder
-            loss_cell_atoms = 0 # Placeholder
-            loss_kld = 0 # Placeholder
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
+            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
+            loss_kld = kld.mean()
             
-            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + loss_kld
+            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + (loss_kld * beta)
             
             # Store loss
             validation_loss += total_loss.item()
@@ -200,3 +240,10 @@ if __name__ == "__main__":
         
         # Print progress
         print(f'Epoch: {epoch} | Train loss: {train_loss:.2e} | Validation loss: {validation_loss:.2e} | Best loss: {best_loss:.2e} (Epoch {best_epoch}) | Patience: {patience_counter}/{patience}')
+
+    # Record date and time
+    setup_json['experiment_end'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Save setup json in model directory
+    with open(experiment_folder + '/setup_json.json', 'w') as f:
+        json.dump(setup_json, f, indent=4)

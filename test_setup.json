@@ -16,16 +16,17 @@
             "validation" : 0.1,
             "test" : 0.1
             },
-        "batch_size" : 5,
+        "batch_size" : 10,
         "num_workers" : 2
     },
     "model" : {
-        "latent_dim" : 128,
+        "latent_dim" : 32,
         "out_dim" : null
     },
     "training" : {
         "epochs" : 10,
-        "learning_rate" : 0.001,
-        "patience" : 3
+        "learning_rate" : 1e-4,
+        "patience" : 3,
+        "beta" : 0.5
     }
 }
