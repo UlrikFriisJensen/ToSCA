@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "test_setup",
+    "experiment_name" : "Test_run",
     "experiment_description" : "This is a test experiment",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -24,9 +24,9 @@
         "out_dim" : null
     },
     "training" : {
-        "epochs" : 10,
+        "epochs" : 500,
         "learning_rate" : 1e-4,
-        "patience" : 3,
+        "patience" : 10,
         "beta" : 0.5
     }
 }

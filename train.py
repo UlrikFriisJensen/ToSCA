@@ -6,7 +6,6 @@ import numpy as np
 from modules.CHILI import CHILI
 from modules.net import SCVAE
 from torch_geometric.loader import DataLoader
-from torch_geometric.nn import Sequential as pyg_Sequential
 import torch
 import datetime
 import pathlib
