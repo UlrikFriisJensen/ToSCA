@@ -95,8 +95,7 @@ if __name__ == "__main__":
     model = SCVAE(
         latent_dim=setup_json['model']['latent_dim'],
         out_dim=setup_json['model']['out_dim'],
-    )
-    model = model.to(device)
+    ).to(device)
     
     # Print model summary
     print(model)
@@ -104,6 +103,9 @@ if __name__ == "__main__":
     # Load checkpoint if specified
     if setup_json['start_from_checkpoint'] is not None:
         model.load_state_dict(torch.load(setup_json['checkpoint']))
+    else:
+        # Set checkpoint to last model
+        setup_json['start_from_checkpoint'] = f'{experiment_folder}/latest_model.pth'
         
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=setup_json['training']['learning_rate'])
@@ -242,6 +244,9 @@ if __name__ == "__main__":
 
     # Record date and time
     setup_json['experiment_end'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Set checkpoint to best model
+    setup_json['start_from_checkpoint'] = f'{experiment_folder}/best_model.pth'
     
     # Save setup json in model directory
     with open(experiment_folder + '/setup_json.json', 'w') as f:

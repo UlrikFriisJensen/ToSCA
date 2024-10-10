@@ -5,6 +5,8 @@
     "experiment_end" : null,
     "random_seed" : 42,
     "start_from_checkpoint" : null,
+    "best_model" : null,
+    "last_model" : null,
     "model_root" : "./models/",
     "data" : {
         "name" : "CHILI-3K",
