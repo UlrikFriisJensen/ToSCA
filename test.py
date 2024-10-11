@@ -10,6 +10,9 @@ import torch
 import datetime
 import pathlib
 from tqdm.auto import tqdm
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
@@ -30,8 +33,8 @@ if __name__ == "__main__":
     #%% General setup
     
     # Set random seed
-    torch.manual_seed(setup_json['seed'])
-    np.random.seed(setup_json['seed'])
+    torch.manual_seed(setup_json['random_seed'])
+    np.random.seed(setup_json['random_seed'])
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -42,7 +45,7 @@ if __name__ == "__main__":
         dataset=setup_json['data']['name']
     )
     
-    # Load datta splits
+    # Load data splits
     dataset.load_data_split(
         split_strategy=setup_json['data']['split_strategy'],
         stratify_on=setup_json['data']['stratify_column'],
@@ -50,9 +53,9 @@ if __name__ == "__main__":
     
     # Dataloader
     if args.test_data == 'validation':
-        data_loader = DataLoader(dataset.validation_set, batch_size=setup_json['training']['batch_size'], shuffle=False)
+        data_loader = DataLoader(dataset.validation_set, batch_size=setup_json['data']['batch_size'], shuffle=False)
     elif args.test_data == 'test':
-        data_loader = DataLoader(dataset.test_set, batch_size=setup_json['training']['batch_size'], shuffle=False)
+        data_loader = DataLoader(dataset.test_set, batch_size=setup_json['data']['batch_size'], shuffle=False)
     
     # Load model
     model = SCVAE(
@@ -61,7 +64,7 @@ if __name__ == "__main__":
     ).to(device)
     
     # Load model weights
-    model.load_state_dict(torch.load(setup_json['model']['start_from_checkpoint']))
+    model.load_state_dict(torch.load(setup_json['start_from_checkpoint']))
     
     # Loss functions
     loss_fn_cell_parameters = torch.nn.MSELoss()
@@ -144,3 +147,51 @@ if __name__ == "__main__":
             f.write(f'Cell positions loss: {cell_positions_loss:.6f}\n')
             f.write(f'Cell atoms loss: {cell_atoms_loss:.6f}\n')
             f.write(f'KLD loss: {kld_loss:.6f}\n')
+
+    #%% Plot loss curves
+    
+    # Load loss data
+    loss_data = pd.read_csv(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/training_log.csv', sep=',')
+
+    # Plot loss curves
+
+    # Total loss
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(loss_data['epoch'], loss_data['train_loss'], label='Train loss')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss'], label='Validation loss')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/loss_curve.png', dpi=300)
+
+    # Train loss components
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(loss_data['epoch'], loss_data['train_loss'], label='Total')
+    ax.plot(loss_data['epoch'], loss_data['train_loss_cell_parameters'], label='Cell parameters')
+    ax.plot(loss_data['epoch'], loss_data['train_loss_cell_positions'], label='Cell positions')
+    ax.plot(loss_data['epoch'], loss_data['train_loss_cell_atoms'], label='Cell atoms')
+    ax.plot(loss_data['epoch'], loss_data['train_loss_kld'] * beta, label='KLD')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/train_loss_components.png', dpi=300)
+
+    # Validation loss components
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(loss_data['epoch'], loss_data['validation_loss'], label='Total')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_parameters'], label='Cell parameters')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_positions'], label='Cell positions')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_atoms'], label='Cell atoms')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss_kld'] * beta, label='KLD')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/validation_loss_components.png', dpi=300)
+
+

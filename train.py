@@ -29,7 +29,7 @@ if __name__ == "__main__":
     #%% General setup
     
     # Make experiment folder
-    experiment_folder = f'{setup_json["model_root"]}/{setup_json["experiment_name"]}'
+    experiment_folder = f'{setup_json["model_root"]}{setup_json["experiment_name"]}'
     pathlib.Path(experiment_folder).mkdir(parents=True, exist_ok=True)
     
     # Record date and time
@@ -106,6 +106,10 @@ if __name__ == "__main__":
     else:
         # Set checkpoint to last model
         setup_json['start_from_checkpoint'] = f'{experiment_folder}/latest_model.pth'
+
+        # Save setup json in model directory
+        with open(experiment_folder + '/setup_json.json', 'w') as f:
+            json.dump(setup_json, f, indent=4)
         
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=setup_json['training']['learning_rate'])
@@ -117,6 +121,11 @@ if __name__ == "__main__":
     # loss_fn_kld = torch.nn.KLDivLoss()
         
     #%% Train model
+
+    # Setup logging file
+    with open(f'{experiment_folder}/training_log.csv', 'w') as f:
+        f.write('epoch,train_loss,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld\n')
+
     beta = setup_json['training']['beta']
     
     best_loss = np.inf
@@ -130,7 +139,15 @@ if __name__ == "__main__":
             break
         # Train model
         model.train()
+
+        # Setup for logging loss
         train_loss = 0
+        train_loss_cell_parameters = 0
+        train_loss_cell_positions = 0
+        train_loss_cell_atoms = 0
+        train_loss_kld = 0
+
+        # Training loop
         for batch in tqdm(train_loader, desc='Training', leave=False):
             # Zero gradients
             optimizer.zero_grad()
@@ -165,7 +182,7 @@ if __name__ == "__main__":
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
-            # Loss
+            # Loss calculation
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, batch.y['cell_params'].view(-1, 6))
             loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
             loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
@@ -179,12 +196,29 @@ if __name__ == "__main__":
             
             # Store loss
             train_loss += total_loss.item()
+            train_loss_cell_parameters += loss_cell_parameters.item()
+            train_loss_cell_positions += loss_cell_positions.item()
+            train_loss_cell_atoms += loss_cell_atoms.item()
+            train_loss_kld += loss_kld.item()
         
+        # Calculate average loss
         train_loss /= len(train_loader)
+        train_loss_cell_parameters /= len(train_loader)
+        train_loss_cell_positions /= len(train_loader)
+        train_loss_cell_atoms /= len(train_loader)
+        train_loss_kld /= len(train_loader)
         
         # Validate model
         model.eval()
+
+        # Setup for logging loss
         validation_loss = 0
+        validation_loss_cell_parameters = 0
+        validation_loss_cell_positions = 0
+        validation_loss_cell_atoms = 0
+        validation_loss_kld = 0
+
+        # Validation loop
         for batch in tqdm(validation_loader, desc='Validation', leave=False):
             # Forward pass
             batch = batch.to(device)
@@ -224,8 +258,17 @@ if __name__ == "__main__":
             
             # Store loss
             validation_loss += total_loss.item()
+            validation_loss_cell_parameters += loss_cell_parameters.item()
+            validation_loss_cell_positions += loss_cell_positions.item()
+            validation_loss_cell_atoms += loss_cell_atoms.item()
+            validation_loss_kld += loss_kld.item()
 
+        # Calculate average loss
         validation_loss /= len(validation_loader)
+        validation_loss_cell_parameters /= len(validation_loader)
+        validation_loss_cell_positions /= len(validation_loader)
+        validation_loss_cell_atoms /= len(validation_loader)
+        validation_loss_kld /= len(validation_loader)
         
         # Check if model improved
         if validation_loss < best_loss:
@@ -239,6 +282,11 @@ if __name__ == "__main__":
         # Save latest model
         torch.save(model.state_dict(), f'{experiment_folder}/latest_model.pth')
         
+        # Save loss in log file
+        with open(f'{experiment_folder}/training_log.csv', 'a') as f:
+            f.write(f'{epoch},{train_loss},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld}\n')
+
+
         # Print progress
         print(f'Epoch: {epoch} | Train loss: {train_loss:.2e} | Validation loss: {validation_loss:.2e} | Best loss: {best_loss:.2e} (Epoch {best_epoch}) | Patience: {patience_counter}/{patience}')
 
