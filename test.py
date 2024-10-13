@@ -13,9 +13,34 @@ from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from ase import Atoms
+from ase.io import write
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
+
+#%% Functions
+
+def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=True):
+    """
+    Create a CIF file from the cell parameters, positions and atoms
+    """
+    if prediction:
+        # Find argmax of atoms
+        cell_atoms = np.argmax(cell_atoms, axis=1)
+
+    # Remove atoms with atom number 0
+    cell_positions = cell_positions[cell_atoms != 0]
+    cell_atoms = cell_atoms[cell_atoms != 0]
+    
+    # Create Atoms object
+    atoms = Atoms(cell_atoms, scaled_positions=cell_positions, cell=cell_params)
+    
+    #print(atoms)
+
+    # Write CIF
+    write(filename + f'_{atoms.symbols}.cif', images=atoms, format='cif')
+    return None
 
 #%% Main
 
@@ -32,6 +57,12 @@ if __name__ == "__main__":
     
     #%% General setup
     
+    # Make predictions folder
+    predictions_folder = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions'
+    ground_truth_folder = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/ground_truth'
+    pathlib.Path(predictions_folder).mkdir(parents=True, exist_ok=True)
+    pathlib.Path(ground_truth_folder).mkdir(parents=True, exist_ok=True)
+
     # Set random seed
     torch.manual_seed(setup_json['random_seed'])
     np.random.seed(setup_json['random_seed'])
@@ -108,7 +139,29 @@ if __name__ == "__main__":
             for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
                 cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
                 cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+
+            # Create CIF files
+
             
+            for batch_index in range(len(batch)):
+                # Prediction
+                create_cif(
+                    cell_params = cell_parameters[batch_index].detach().cpu().numpy(),
+                    cell_positions = cell_positions[batch_index].detach().cpu().numpy(),
+                    cell_atoms = cell_atoms[batch_index].detach().cpu().numpy(),
+                    filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
+                    prediction=True
+                )
+
+                # Ground truth
+                create_cif(
+                    cell_params = batch.y['cell_params'].view(-1, 6)[batch_index].detach().cpu().numpy(),
+                    cell_positions = cell_positions_true[batch_index].detach().cpu().numpy(),
+                    cell_atoms = cell_atoms_true[batch_index].detach().cpu().numpy(),
+                    filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/ground_truth/{batch.y["crystal_type"][batch_index]}',
+                    prediction=False
+                )
+
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
