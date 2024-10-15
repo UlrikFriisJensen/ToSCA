@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Test_run2",
-    "experiment_description" : "This is a test experiment",
+    "experiment_name" : "Seperated_cell_parameters",
+    "experiment_description" : "This experiment tries to seperate the prediction of the cell parameters from the prediction of the cell content.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,

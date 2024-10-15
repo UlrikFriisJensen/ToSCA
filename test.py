@@ -15,13 +15,14 @@ import seaborn as sns
 import pandas as pd
 from ase import Atoms
 from ase.io import write
+from sklearn.decomposition import PCA
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
 
 #%% Functions
 
-def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=True):
+def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=True, composition=None):
     """
     Create a CIF file from the cell parameters, positions and atoms
     """
@@ -35,11 +36,15 @@ def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=Tru
     
     # Create Atoms object
     atoms = Atoms(cell_atoms, scaled_positions=cell_positions, cell=cell_params)
-    
-    #print(atoms)
+
+    if not composition:
+        composition = str(atoms.symbols)
 
     # Write CIF
-    write(filename + f'_{atoms.symbols}.cif', images=atoms, format='cif')
+    write(filename + f'_{composition}.cif', images=atoms, format='cif')
+
+    if not prediction:
+        return composition
     return None
 
 #%% Main
@@ -113,6 +118,9 @@ if __name__ == "__main__":
     cell_atoms_loss = 0
     kld_loss = 0
     
+    latent_space_means = []
+    sample_crystal_types = []
+
     with torch.no_grad():
         for batch in tqdm(data_loader, desc='Testing'):
             batch = batch.to(device)
@@ -126,6 +134,10 @@ if __name__ == "__main__":
                 batch = batch.batch,
             )
             
+            # Store latent space means
+            latent_space_means.extend(z_sample.cpu().numpy())
+            sample_crystal_types.extend(batch.y['crystal_type'])
+
             # Assign batch labels to unit cell positions
             unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
             index_sum = 0
@@ -141,26 +153,27 @@ if __name__ == "__main__":
                 cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
 
             # Create CIF files
-
-            
             for batch_index in range(len(batch)):
-                # Prediction
-                create_cif(
-                    cell_params = cell_parameters[batch_index].detach().cpu().numpy(),
-                    cell_positions = cell_positions[batch_index].detach().cpu().numpy(),
-                    cell_atoms = cell_atoms[batch_index].detach().cpu().numpy(),
-                    filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
-                    prediction=True
-                )
-
                 # Ground truth
-                create_cif(
+                ground_truth_composition = create_cif(
                     cell_params = batch.y['cell_params'].view(-1, 6)[batch_index].detach().cpu().numpy(),
                     cell_positions = cell_positions_true[batch_index].detach().cpu().numpy(),
                     cell_atoms = cell_atoms_true[batch_index].detach().cpu().numpy(),
                     filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/ground_truth/{batch.y["crystal_type"][batch_index]}',
                     prediction=False
                 )
+                
+                # Prediction
+                create_cif(
+                    cell_params = cell_parameters[batch_index].detach().cpu().numpy(),
+                    cell_positions = cell_positions[batch_index].detach().cpu().numpy(),
+                    cell_atoms = cell_atoms[batch_index].detach().cpu().numpy(),
+                    filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
+                    prediction=True,
+                    composition=ground_truth_composition
+                )
+
+                
 
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
@@ -201,6 +214,24 @@ if __name__ == "__main__":
             f.write(f'Cell atoms loss: {cell_atoms_loss:.6f}\n')
             f.write(f'KLD loss: {kld_loss:.6f}\n')
 
+    #%% Plot latent space
+
+    latent_space_means = np.array(latent_space_means)
+    print(latent_space_means.shape)
+    print(len(sample_crystal_types))
+
+    # Reduce dimensions with PCA
+    pca = PCA(n_components=2)
+    latent_space_pca = pca.fit_transform(latent_space_means)
+
+    # Plot
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    sns.scatterplot(x=latent_space_pca[:,0], y=latent_space_pca[:,1], hue=sample_crystal_types, ax=ax)
+    ax.set_xlabel('PCA 1')
+    ax.set_ylabel('PCA 2')
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space.png', dpi=300)
+    
     #%% Plot loss curves
     
     # Load loss data

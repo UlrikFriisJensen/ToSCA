@@ -56,7 +56,7 @@ class SCVAE(nn.Module):
             (GATv2Conv(7, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'), # aggr=self.aggr_list
             nn.ELU(),
             (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-            nn.ELU(),
+            #nn.ELU(),
         ])
         
         # self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
@@ -142,6 +142,12 @@ class SCVAE(nn.Module):
         )
         
         self.cell_parameter_decoder = Sequential(
+            #nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+            #nn.ELU(),
+            #nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+            #nn.ELU(),
+            #nn.Linear(self.decoder_hidden_dim//4, 6),
+
             nn.Linear(self.decoder_hidden_dim, 6),
         )
         
@@ -197,15 +203,15 @@ class SCVAE(nn.Module):
         
     def decode(self, z):
         
-        z = self.shared_decoder(z)
+        z_shared = self.shared_decoder(z)
         
-        cell_parameters = self.cell_parameter_decoder(z)
+        cell_parameters = self.cell_parameter_decoder(z_shared)
         cell_parameters = cell_parameters.view(-1, 6)
         
-        cell_positions = self.cell_position_decoder(z)
+        cell_positions = self.cell_position_decoder(z_shared)
         cell_positions = cell_positions.view(-1, self.out_dim, 3)
         
-        cell_atoms = self.cell_atom_decoder(z)
+        cell_atoms = self.cell_atom_decoder(z_shared)
         cell_atoms = cell_atoms.view(-1, self.out_dim, 118)
         
         return cell_parameters, cell_positions, cell_atoms
