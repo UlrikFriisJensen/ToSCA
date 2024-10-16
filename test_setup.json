@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Normalized_data",
-    "experiment_description" : "Testing the effect of normalizing the scattering and cell parameters",
+    "experiment_name" : "Test_run",
+    "experiment_description" : "Test run to check if everything is working",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,

@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 #%% Functions
 
-def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=True, composition=None):
+def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=True, composition=None, simplified_atom_identities=False):
     """
     Create a CIF file from the cell parameters, positions and atoms
     """
@@ -33,6 +33,10 @@ def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=Tru
     # Remove atoms with atom number 0
     cell_positions = cell_positions[cell_atoms != 0]
     cell_atoms = cell_atoms[cell_atoms != 0]
+    
+    if simplified_atom_identities:
+        cell_atoms = np.where(cell_atoms == 1, 8, cell_atoms)
+        cell_atoms = np.where(cell_atoms == 2, 26, cell_atoms)
     
     # Create Atoms object
     atoms = Atoms(cell_atoms, scaled_positions=cell_positions, cell=cell_params)
@@ -214,10 +218,9 @@ if __name__ == "__main__":
                     cell_atoms = cell_atoms[batch_index].detach().cpu().numpy(),
                     filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
                     prediction=True,
-                    composition=ground_truth_composition
+                    composition=ground_truth_composition,
+                    simplified_atom_identities=setup_json['training']['simplified_atom_identities'],
                 )
-
-                
 
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
