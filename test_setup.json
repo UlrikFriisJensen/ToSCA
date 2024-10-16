@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Seperated_cell_parameters",
-    "experiment_description" : "This experiment tries to seperate the prediction of the cell parameters from the prediction of the cell content.",
+    "experiment_name" : "Normalized_data",
+    "experiment_description" : "Testing the effect of normalizing the scattering and cell parameters",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -17,16 +17,58 @@
             "test" : 0.1
             },
         "batch_size" : 10,
-        "num_workers" : 2
+        "num_workers" : 2,
+        "normalize_scattering" : true,
+        "normalize_cell_parameters" : true,
+        "cell_normalization" : {
+            "a" : {
+                "mean" : null,
+                "std" : null
+            },
+            "b" : {
+                "mean" : null,
+                "std" : null
+            },
+            "c" : {
+                "mean" : null,
+                "std" : null
+            },
+            "alpha" : {
+                "mean" : null,
+                "std" : null
+            },
+            "beta" : {
+                "mean" : null,
+                "std" : null
+            },
+            "gamma" : {
+                "mean" : null,
+                "std" : null
+            }
+        }
     },
     "model" : {
         "latent_dim" : 32,
-        "out_dim" : null
+        "out_dim" : null,
+        "gnn_dim" : 64,
+        "gnn_heads" : 1,
+        "gnn_edge_dim" : 1,
+        "scattering_channels" : 2,
+        "scattering_dim" : 512,
+        "scattering_kernel_size" : 1,
+        "scattering_stride" : 1,
+        "scattering_padding" : 0,
+        "decoder_hidden_dim" : 2048,
+        "position_output_dim" : 3,
+        "atom_output_dim" : 3,
+        "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 500,
+        "epochs" : 10,
         "learning_rate" : 1e-5,
-        "patience" : 25,
-        "beta" : 0.5
+        "patience" : 5,
+        "beta" : 0.5,
+        "simplified_atom_identities" : true,
+        "ligands" : [1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53]
     }
 }

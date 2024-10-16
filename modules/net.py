@@ -36,7 +36,23 @@ class GatedConv1d(nn.Module):
 #%% Model
 
 class SCVAE(nn.Module):
-    def __init__(self, latent_dim=128, out_dim=50, gnn_dim=64, gnn_heads=1, gnn_edge_dim=1, scattering_channels=2, scattering_dim=512, scattering_kernel_size=1, scattering_stride=1, scattering_padding=0, decoder_hidden_dim=2048):
+    def __init__(
+        self, 
+        latent_dim=128, 
+        out_dim=50, 
+        gnn_dim=64, 
+        gnn_heads=1, 
+        gnn_edge_dim=1, 
+        scattering_channels=2, 
+        scattering_dim=512, 
+        scattering_kernel_size=1, 
+        scattering_stride=1, 
+        scattering_padding=0, 
+        decoder_hidden_dim=2048, 
+        position_output_dim=3, 
+        atom_output_dim=119, 
+        cell_output_dim=6
+    ):
         super(SCVAE, self).__init__()
         self.latent_dim = latent_dim
         self.out_dim = out_dim
@@ -49,6 +65,9 @@ class SCVAE(nn.Module):
         self.scattering_stride = scattering_stride
         self.scattering_padding = scattering_padding
         self.decoder_hidden_dim = decoder_hidden_dim
+        self.position_output_dim = position_output_dim
+        self.atom_output_dim = atom_output_dim
+        self.cell_output_dim = cell_output_dim
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.aggr_list = ['sum'] #['mean', 'max', 'sum', 'std', 'var']
         
@@ -148,19 +167,19 @@ class SCVAE(nn.Module):
             #nn.ELU(),
             #nn.Linear(self.decoder_hidden_dim//4, 6),
 
-            nn.Linear(self.decoder_hidden_dim, 6),
+            nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
         )
         
         self.cell_position_decoder = Sequential(
             # nn.Linear(self.decoder_hidden_dim, self.decoder_hidden_dim),
             # nn.ELU(),
-            nn.Linear(self.decoder_hidden_dim, self.out_dim*3),
+            nn.Linear(self.decoder_hidden_dim, self.out_dim*self.position_output_dim),
         )
         
         self.cell_atom_decoder = Sequential(
             # nn.Linear(self.decoder_hidden_dim, self.decoder_hidden_dim),
             # nn.ELU(),
-            nn.Linear(self.decoder_hidden_dim, self.out_dim*118),
+            nn.Linear(self.decoder_hidden_dim, self.out_dim*self.atom_output_dim),
         )
         
 
@@ -206,13 +225,13 @@ class SCVAE(nn.Module):
         z_shared = self.shared_decoder(z)
         
         cell_parameters = self.cell_parameter_decoder(z_shared)
-        cell_parameters = cell_parameters.view(-1, 6)
+        cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
         
         cell_positions = self.cell_position_decoder(z_shared)
-        cell_positions = cell_positions.view(-1, self.out_dim, 3)
+        cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
         
         cell_atoms = self.cell_atom_decoder(z_shared)
-        cell_atoms = cell_atoms.view(-1, self.out_dim, 118)
+        cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
         
         return cell_parameters, cell_positions, cell_atoms
 

@@ -97,6 +97,18 @@ if __name__ == "__main__":
     model = SCVAE(
         latent_dim=setup_json['model']['latent_dim'],
         out_dim=setup_json['model']['out_dim'],
+        gnn_dim=setup_json['model']['gnn_dim'],
+        gnn_heads=setup_json['model']['gnn_heads'],
+        gnn_edge_dim=setup_json['model']['gnn_edge_dim'],
+        scattering_channels=setup_json['model']['scattering_channels'],
+        scattering_dim=setup_json['model']['scattering_dim'],
+        scattering_kernel_size=setup_json['model']['scattering_kernel_size'],
+        scattering_stride=setup_json['model']['scattering_stride'],
+        scattering_padding=setup_json['model']['scattering_padding'],
+        decoder_hidden_dim=setup_json['model']['decoder_hidden_dim'],
+        position_output_dim=setup_json['model']['position_output_dim'],
+        atom_output_dim=setup_json['model']['atom_output_dim'],
+        cell_output_dim=setup_json['model']['cell_output_dim'],
     ).to(device)
     
     # Load model weights
@@ -107,6 +119,24 @@ if __name__ == "__main__":
     loss_fn_cell_positions = torch.nn.MSELoss()
     loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
     # loss_fn_kld = torch.nn.KLDivLoss()
+    
+    if setup_json['data']['normalize_cell_parameters']:
+        cell_means = torch.tensor([
+            setup_json['data']['cell_normalization']['a']['mean'],
+            setup_json['data']['cell_normalization']['b']['mean'],
+            setup_json['data']['cell_normalization']['c']['mean'],
+            setup_json['data']['cell_normalization']['alpha']['mean'],
+            setup_json['data']['cell_normalization']['beta']['mean'],
+            setup_json['data']['cell_normalization']['gamma']['mean'],
+        ]).float().to(device)
+        cell_stds = torch.tensor([
+            setup_json['data']['cell_normalization']['a']['std'],
+            setup_json['data']['cell_normalization']['b']['std'],
+            setup_json['data']['cell_normalization']['c']['std'],
+            setup_json['data']['cell_normalization']['alpha']['std'],
+            setup_json['data']['cell_normalization']['beta']['std'],
+            setup_json['data']['cell_normalization']['gamma']['std'],
+        ]).float().to(device)
     
     beta = setup_json['training']['beta']
     
@@ -123,7 +153,21 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         for batch in tqdm(data_loader, desc='Testing'):
+            # Put batch on device
             batch = batch.to(device)
+            
+            # Normalize scattering
+            batch_scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1)
+            if setup_json['data']['normalize_scattering']:
+                # Normalize so highest peak in each sample is 1
+                # batch_scattering -= torch.amin(batch_scattering, dim=1, keepdim=True)[0]
+                batch_scattering /= torch.amax(batch_scattering, dim=1, keepdim=True)[0]
+
+            # Normalize cell parameters
+            cell_parameters_true = batch.y['cell_params'].view(-1, 6)
+            if setup_json['data']['normalize_cell_parameters']:
+                cell_parameters_true = (cell_parameters_true - cell_means) / cell_stds
+            cell_parameters_true = cell_parameters_true.float()
             
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
@@ -178,6 +222,16 @@ if __name__ == "__main__":
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
+            
+            # Simplify atom identities
+            if setup_json['training']['simplified_atom_identities']:
+                # Map atom number 0 to logit 0 (No atom)
+                cell_atoms_true = torch.where(cell_atoms_true == 0, 0, cell_atoms_true)
+                # Map atom numbers of ligands to logit 1 (Ligand)
+                for ligand in setup_json['training']['ligands']:
+                    cell_atoms_true = torch.where(cell_atoms_true == ligand, 1, cell_atoms_true)
+                # Map all other atom numbers to logit 2 (Metal)
+                cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
             # Loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, batch.y['cell_params'].view(-1, 6))
