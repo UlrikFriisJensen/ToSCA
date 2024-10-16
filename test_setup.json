@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Test_run",
-    "experiment_description" : "Test run to check if everything is working",
+    "experiment_name" : "Baseline_run",
+    "experiment_description" : "Baseline run to compare with previous results",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -50,7 +50,7 @@
     "model" : {
         "latent_dim" : 32,
         "out_dim" : null,
-        "gnn_dim" : 64,
+        "gnn_dim" : 512,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 2,
@@ -64,9 +64,9 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 10,
+        "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 5,
+        "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53]

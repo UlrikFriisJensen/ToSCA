@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Test_run
+#SBATCH --job-name=Baseline_run
 
 #SBATCH --ntasks=1 --cpus-per-task=8 --mem=6000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/Test_run/setup_json.json
+python test.py --test_data validation --setup_json ./models/Baseline_run/setup_json.json
