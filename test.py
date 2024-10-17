@@ -230,7 +230,7 @@ if __name__ == "__main__":
             if setup_json['training']['simplified_atom_identities']:
                 # Map atom number 0 to logit 0 (No atom)
                 cell_atoms_true = torch.where(cell_atoms_true == 0, 0, cell_atoms_true)
-                # Map atom numbers of ligands to logit 1 (Ligand)
+                # Map atom numbers of ligands to logit 1 (Ligand) # [1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53]
                 for ligand in setup_json['training']['ligands']:
                     cell_atoms_true = torch.where(cell_atoms_true == ligand, 1, cell_atoms_true)
                 # Map all other atom numbers to logit 2 (Metal)

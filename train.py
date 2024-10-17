@@ -118,6 +118,9 @@ if __name__ == "__main__":
         setup_json['data']['cell_normalization']['gamma']['mean'] = 0 #np.mean(cell_gamma)
         setup_json['data']['cell_normalization']['gamma']['std'] = 180 #np.std(cell_gamma) + eps
     
+        # Free up memory
+        del cell_a, cell_b, cell_c, cell_alpha, cell_beta, cell_gamma
+        
     # Save setup json in model directory
     with open(experiment_folder + '/setup_json.json', 'w') as f:
         json.dump(setup_json, f, indent=4)

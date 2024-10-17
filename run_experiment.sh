@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=Baseline_run
+#SBATCH --job-name=More_gnn_heads
 
 #SBATCH --ntasks=1 --cpus-per-task=8 --mem=6000M
 
 #SBATCH -p gpu --gres=gpu:titanrtx:1
 
-#SBATCH --time=01:00:00
+#SBATCH --time=1-00:00:00
 
 #SBATCH -o ./slurm_outputs/scvae-%j.out #STDOUT
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/Baseline_run/setup_json.json
+python test.py --test_data validation --setup_json ./models/More_gnn_heads/setup_json.json

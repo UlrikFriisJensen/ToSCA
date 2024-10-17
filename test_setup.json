@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Baseline_run",
-    "experiment_description" : "Baseline run to compare with previous results",
+    "experiment_name" : "More_gnn_heads",
+    "experiment_description" : "Run with increased number of GNN heads",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -17,7 +17,7 @@
             "test" : 0.1
             },
         "batch_size" : 10,
-        "num_workers" : 2,
+        "num_workers" : 4,
         "normalize_scattering" : true,
         "normalize_cell_parameters" : true,
         "cell_normalization" : {
@@ -50,8 +50,8 @@
     "model" : {
         "latent_dim" : 32,
         "out_dim" : null,
-        "gnn_dim" : 512,
-        "gnn_heads" : 1,
+        "gnn_dim" : 64,
+        "gnn_heads" : 2,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 2,
         "scattering_dim" : 512,
@@ -69,6 +69,6 @@
         "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
-        "ligands" : [1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53]
+        "ligands" : [8]
     }
 }
