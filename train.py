@@ -10,6 +10,7 @@ import torch
 import datetime
 import pathlib
 from tqdm.auto import tqdm
+from modules.loss_functions import weighted_MSELoss, weighted_CrossEntropyLoss
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
@@ -194,9 +195,11 @@ if __name__ == "__main__":
     
     # Loss functions
     loss_fn_cell_parameters = torch.nn.MSELoss()
-    loss_fn_cell_positions = torch.nn.MSELoss()
-    loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
+    # loss_fn_cell_positions = torch.nn.MSELoss()
+    # loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
     # loss_fn_kld = torch.nn.KLDivLoss()
+    loss_fn_cell_positions = weighted_MSELoss()
+    loss_fn_cell_atoms = weighted_CrossEntropyLoss()
         
     #%% Train model
 
@@ -253,7 +256,7 @@ if __name__ == "__main__":
         train_loss_kld = 0
 
         # Training loop
-        for batch in tqdm(train_loader, desc='Training', leave=False):
+        for batch in tqdm(train_loader, desc='Training', leave=False, disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
             
@@ -312,6 +315,10 @@ if __name__ == "__main__":
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
+            # Make loss weights
+            cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
+            cell_atoms_weights = torch.where(cell_atoms_true != 0, 1, 0.1).float().to(device)
+            
             # Simplify atom identities
             if setup_json['training']['simplified_atom_identities']:
                 # Map atom number 0 to logit 0 (No atom)
@@ -323,9 +330,14 @@ if __name__ == "__main__":
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
             # Loss calculation
-            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true)
-            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Weight the position loss based on what atoms are present in the ground truth
-            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
+            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
+            
+            # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
+            
+            # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
+            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
+            
             loss_kld = kld.mean()
             
             total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
@@ -359,7 +371,7 @@ if __name__ == "__main__":
         validation_loss_kld = 0
 
         # Validation loop
-        for batch in tqdm(validation_loader, desc='Validation', leave=False):
+        for batch in tqdm(validation_loader, desc='Validation', leave=False, disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
             
@@ -415,6 +427,10 @@ if __name__ == "__main__":
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
+            # Make loss weights
+            cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
+            cell_atoms_weights = torch.where(cell_atoms_true != 0, 1, 0.1).float().to(device)
+            
             # Simplify atom identities
             if setup_json['training']['simplified_atom_identities']:
                 # Map atom number 0 to logit 0 (No atom)
@@ -426,9 +442,14 @@ if __name__ == "__main__":
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
             # Loss
-            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true)
-            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
-            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
+            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
+            
+            # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
+            
+            # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
+            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
+            
             loss_kld = kld.mean()
             
             total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)

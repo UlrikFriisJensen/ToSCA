@@ -1,11 +1,12 @@
 {
-    "experiment_name" : "Test_run_norm_low_lr",
-    "experiment_description" : "Test run with full normalization and lower learning rate",
+    "experiment_name" : "weighted_loss",
+    "experiment_description" : "Run with weighted loss to de-prioritize dummy atoms",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
     "start_from_checkpoint" : null,
     "model_root" : "./models/",
+    "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-3K",
         "root" : "./data/",
@@ -74,9 +75,9 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 1000,
+        "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 25,
+        "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]

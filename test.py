@@ -16,6 +16,7 @@ import pandas as pd
 from ase import Atoms
 from ase.io import write
 from sklearn.decomposition import PCA
+from modules.loss_functions import weighted_MSELoss, weighted_CrossEntropyLoss
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
@@ -120,9 +121,11 @@ if __name__ == "__main__":
     
     # Loss functions
     loss_fn_cell_parameters = torch.nn.MSELoss()
-    loss_fn_cell_positions = torch.nn.MSELoss()
-    loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
+    # loss_fn_cell_positions = torch.nn.MSELoss()
+    # loss_fn_cell_atoms = torch.nn.CrossEntropyLoss()
     # loss_fn_kld = torch.nn.KLDivLoss()
+    loss_fn_cell_positions = weighted_MSELoss()
+    loss_fn_cell_atoms = weighted_CrossEntropyLoss()
     
     # Load normalization parameters
     if setup_json['data']['normalize_cell_parameters']:
@@ -165,7 +168,7 @@ if __name__ == "__main__":
     sample_crystal_types = []
 
     with torch.no_grad():
-        for batch in tqdm(data_loader, desc='Testing'):
+        for batch in tqdm(data_loader, desc='Testing', disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
             
@@ -213,7 +216,7 @@ if __name__ == "__main__":
             for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
                 unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
                 index_sum += unit_cell_atoms
-                
+            
             cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
             cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
             
@@ -256,6 +259,10 @@ if __name__ == "__main__":
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
+            # Make loss weights
+            cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
+            cell_atoms_weights = torch.where(cell_atoms_true != 0, 1, 0.1).float().to(device)
+            
             # Simplify atom identities
             if setup_json['training']['simplified_atom_identities']:
                 # Map atom number 0 to logit 0 (No atom)
@@ -267,9 +274,14 @@ if __name__ == "__main__":
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
             # Loss
-            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true)
-            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
-            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
+            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
+            
+            # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
+            
+            # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
+            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
+            
             loss_kld = kld.mean()
             
             total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
