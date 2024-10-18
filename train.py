@@ -120,7 +120,39 @@ if __name__ == "__main__":
     
         # Free up memory
         del cell_a, cell_b, cell_c, cell_alpha, cell_beta, cell_gamma
+    
+    # Calculate normalization factors for atom positions
+    if setup_json['data']['normalize_atom_positions']:
+        atom_positions = []
+        for batch in train_loader:
+            atom_positions.extend(batch.pos_abs.tolist())
         
+        atom_positions = np.array(atom_positions).flatten()
+
+        eps = 1e-10
+        
+        setup_json['data']['atom_position_normalization']['mean'] = np.mean(atom_positions, axis=0)
+        setup_json['data']['atom_position_normalization']['std'] = np.std(atom_positions, axis=0) + eps
+        
+        # Free up memory
+        del atom_positions
+
+    # Calculate normalization factors for distances
+    if setup_json['data']['normalize_distances']:
+        distances = []
+        for batch in train_loader:
+            distances.extend(batch.edge_attr.tolist())
+        
+        distances = np.array(distances)
+        
+        eps = 1e-10
+        
+        setup_json['data']['distance_normalization']['mean'] = np.mean(distances, axis=0)
+        setup_json['data']['distance_normalization']['std'] = np.std(distances, axis=0) + eps
+        
+        # Free up memory
+        del distances
+
     # Save setup json in model directory
     with open(experiment_folder + '/setup_json.json', 'w') as f:
         json.dump(setup_json, f, indent=4)
@@ -172,6 +204,7 @@ if __name__ == "__main__":
     with open(f'{experiment_folder}/training_log.csv', 'w') as f:
         f.write('epoch,train_loss,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld\n')
 
+    # Load normalization factors
     if setup_json['data']['normalize_cell_parameters']:
         cell_means = torch.tensor([
             setup_json['data']['cell_normalization']['a']['mean'],
@@ -189,6 +222,14 @@ if __name__ == "__main__":
             setup_json['data']['cell_normalization']['beta']['std'],
             setup_json['data']['cell_normalization']['gamma']['std'],
         ]).float().to(device)
+
+    if setup_json['data']['normalize_atom_positions']:
+        atom_position_means = torch.tensor(setup_json['data']['atom_position_normalization']['mean']).float().to(device)
+        atom_position_stds = torch.tensor(setup_json['data']['atom_position_normalization']['std']).float().to(device)
+
+    if setup_json['data']['normalize_distances']:
+        distance_means = torch.tensor(setup_json['data']['distance_normalization']['mean']).float().to(device)
+        distance_stds = torch.tensor(setup_json['data']['distance_normalization']['std']).float().to(device)
 
     beta = setup_json['training']['beta']
     
@@ -232,12 +273,24 @@ if __name__ == "__main__":
                 cell_parameters_true = (cell_parameters_true - cell_means) / cell_stds
             cell_parameters_true = cell_parameters_true.float()
             
+            # Normalize atom positions
+            batch_positions = batch.pos_abs
+            if setup_json['data']['normalize_atom_positions']:
+                batch_positions = (batch_positions - atom_position_means) / atom_position_stds
+            batch_positions = batch_positions.float()
+
+            # Normalize distances
+            batch_distances = batch.edge_attr
+            if setup_json['data']['normalize_distances']:
+                batch_distances = (batch_distances - distance_means) / distance_stds
+            batch_distances = batch_distances.float()
+
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch.pos_abs), dim=1), 
+                x = torch.cat((batch.x, batch_positions), dim=1), 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
-                edge_attr = batch.edge_attr, 
+                edge_attr = batch_distances, 
                 batch = batch.batch,
             )
             
@@ -271,11 +324,11 @@ if __name__ == "__main__":
             
             # Loss calculation
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true)
-            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true)
+            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Weight the position loss based on what atoms are present in the ground truth
             loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
             loss_kld = kld.mean()
             
-            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + (loss_kld * beta)
+            total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -323,12 +376,24 @@ if __name__ == "__main__":
                 cell_parameters_true = (cell_parameters_true - cell_means) / cell_stds
             cell_parameters_true = cell_parameters_true.float()
             
+            # Normalize atom positions
+            batch_positions = batch.pos_abs
+            if setup_json['data']['normalize_atom_positions']:
+                batch_positions = (batch_positions - atom_position_means) / atom_position_stds
+            batch_positions = batch_positions.float()
+
+            # Normalize distances
+            batch_distances = batch.edge_attr
+            if setup_json['data']['normalize_distances']:
+                batch_distances = (batch_distances - distance_means) / distance_stds
+            batch_distances = batch_distances.float()
+            
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch.pos_abs), dim=1), 
+                x = torch.cat((batch.x, batch_positions), dim=1), 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
-                edge_attr = batch.edge_attr, 
+                edge_attr = batch_distances, 
                 batch = batch.batch,
             )
             
@@ -366,7 +431,7 @@ if __name__ == "__main__":
             loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true)
             loss_kld = kld.mean()
             
-            total_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms + (loss_kld * beta)
+            total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
             
             # Store loss
             validation_loss += total_loss.item()

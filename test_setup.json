@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "More_gnn_heads",
-    "experiment_description" : "Run with increased number of GNN heads",
+    "experiment_name" : "Test_run_norm_low_lr",
+    "experiment_description" : "Test run with full normalization and lower learning rate",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -45,15 +45,25 @@
                 "mean" : null,
                 "std" : null
             }
+        },
+        "normalize_atom_positions" : true,
+        "atom_position_normalization" : {
+            "mean" : null,
+            "std" : null
+        },
+        "normalize_distances" : true,
+        "distance_normalization" : {
+            "mean" : null,
+            "std" : null
         }
     },
     "model" : {
         "latent_dim" : 32,
         "out_dim" : null,
         "gnn_dim" : 64,
-        "gnn_heads" : 2,
+        "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
-        "scattering_channels" : 2,
+        "scattering_channels" : 1,
         "scattering_dim" : 512,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
@@ -64,9 +74,9 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 5000,
+        "epochs" : 1000,
         "learning_rate" : 1e-5,
-        "patience" : 50,
+        "patience" : 25,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]
