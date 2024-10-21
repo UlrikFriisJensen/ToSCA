@@ -16,6 +16,7 @@ import pandas as pd
 from ase import Atoms
 from ase.io import write
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 from modules.loss_functions import weighted_MSELoss, weighted_CrossEntropyLoss
 
 #%% Suppress warnings
@@ -199,10 +200,10 @@ if __name__ == "__main__":
             
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch.pos_abs), dim=1), 
+                x = torch.cat((batch.x, batch_positions), dim=1), 
                 edge_index = batch.edge_index, 
-                scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1),
-                edge_attr = batch.edge_attr, 
+                scattering = batch_scattering,
+                edge_attr = batch_distances, 
                 batch = batch.batch,
             )
             
@@ -317,17 +318,41 @@ if __name__ == "__main__":
 
     latent_space_means = np.array(latent_space_means)
 
-    # Reduce dimensions with PCA
-    pca = PCA(n_components=2)
-    latent_space_pca = pca.fit_transform(latent_space_means)
-
-    # Plot
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    sns.scatterplot(x=latent_space_pca[:,0], y=latent_space_pca[:,1], hue=sample_crystal_types, ax=ax)
-    ax.set_xlabel('PCA 1')
-    ax.set_ylabel('PCA 2')
-    fig.tight_layout()
-    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space.png', dpi=300)
+    if setup_json['model']['latent_dim'] == 2:
+        latent_space_2d = latent_space_means
+        
+        # Plot
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        sns.scatterplot(x=latent_space_2d[:,0], y=latent_space_2d[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
+        ax.set_xlabel('Latent dim 1')
+        ax.set_ylabel('Latent dim 2')
+        fig.tight_layout()
+        fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space.png', dpi=300)
+    elif setup_json['model']['latent_dim'] > 2:
+        # Reduce dimensions with PCA
+        pca = PCA(n_components=2)
+        latent_space_2d_pca = pca.fit_transform(latent_space_means)
+        
+        # Plot
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        sns.scatterplot(x=latent_space_2d_pca[:,0], y=latent_space_2d_pca[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
+        ax.set_xlabel('PC 1')
+        ax.set_ylabel('PC 2')
+        fig.tight_layout()
+        fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_pca.png', dpi=300)
+        
+        # Reduce dimensions with t-SNE
+        tsne = TSNE(n_components=2)
+        latent_space_2d_tsne = tsne.fit_transform(latent_space_means)
+        
+        # Plot
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+        sns.scatterplot(x=latent_space_2d_tsne[:,0], y=latent_space_2d_tsne[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
+        ax.set_xlabel('t-SNE dim 1')
+        ax.set_ylabel('t-SNE dim 2')
+        fig.tight_layout()
+        fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_tsne.png', dpi=300)
+    
     
     #%% Plot loss curves
     
