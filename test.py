@@ -316,8 +316,6 @@ if __name__ == "__main__":
     #%% Plot latent space
 
     latent_space_means = np.array(latent_space_means)
-    print(latent_space_means.shape)
-    print(len(sample_crystal_types))
 
     # Reduce dimensions with PCA
     pca = PCA(n_components=2)
