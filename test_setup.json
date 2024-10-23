@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "2d_latentspace",
-    "experiment_description" : "Run with a 2D latent space",
+    "experiment_name" : "2d_latentspace_larger_encoding",
+    "experiment_description" : "Run with a 2D latent space and larger encoding layers",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -61,11 +61,11 @@
     "model" : {
         "latent_dim" : 2,
         "out_dim" : null,
-        "gnn_dim" : 64,
+        "gnn_dim" : 128,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 512,
+        "scattering_dim" : 1024,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
