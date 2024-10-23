@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "2d_latentspace_bigger_encoding",
-    "experiment_description" : "Run with a 2D latent space and increased size of the encoding layers",
+    "experiment_name" : "2d_latentspace",
+    "experiment_description" : "Run with a 2D latent space",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -17,7 +17,7 @@
             "validation" : 0.1,
             "test" : 0.1
             },
-        "batch_size" : 16,
+        "batch_size" : 8,
         "num_workers" : 8,
         "normalize_scattering" : true,
         "normalize_cell_parameters" : true,
@@ -61,11 +61,11 @@
     "model" : {
         "latent_dim" : 2,
         "out_dim" : null,
-        "gnn_dim" : 128,
+        "gnn_dim" : 64,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 1024,
+        "scattering_dim" : 512,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
