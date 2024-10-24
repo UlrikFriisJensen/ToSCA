@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=2d_latentspace_larger_encoding
+#SBATCH --job-name=larger_encoding
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=6000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/2d_latentspace_larger_encoding/setup_json.json
+python test.py --test_data validation --setup_json ./models/larger_encoding/setup_json.json
