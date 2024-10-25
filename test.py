@@ -168,6 +168,15 @@ if __name__ == "__main__":
     latent_space_means = []
     sample_crystal_types = []
 
+    if setup_json['data']['name'] == 'CHILI-3K':
+        # Logging for analysis of Crystal type dependent performance
+        
+        # Crystal type dependent losses
+        loss_CrystalType = {'total': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': []}
+        
+        # Crystal type dependent reconstructions
+        reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': []}
+        
     with torch.no_grad():
         for batch in tqdm(data_loader, desc='Testing', disable=setup_json['disable_tqdm']):
             # Put batch on device
@@ -233,6 +242,56 @@ if __name__ == "__main__":
 
             # Create CIF files
             for batch_index in range(len(batch)):
+                # Crystal type dependent reconstructions
+                if setup_json['data']['name'] == 'CHILI-3K':
+                    ct_cell_atoms_true = cell_atoms_true[batch_index]
+                    # Simplify atom identities
+                    if setup_json['training']['simplified_atom_identities']:
+                        # Map atom number 0 to logit 0 (No atom)
+                        ct_cell_atoms_true = torch.where(ct_cell_atoms_true == 0, 0, ct_cell_atoms_true)
+                        # Map atom numbers of ligands to logit 1 (Ligand) # [1, 6, 7, 8, 9, 15, 16, 17, 34, 35, 53]
+                        for ligand in setup_json['training']['ligands']:
+                            ct_cell_atoms_true = torch.where(ct_cell_atoms_true == ligand, 1, ct_cell_atoms_true)
+                        # Map all other atom numbers to logit 2 (Metal)
+                        ct_cell_atoms_true = torch.where(ct_cell_atoms_true >= 2, 2, ct_cell_atoms_true)
+                    
+                    # Make loss weights
+                    ct_cell_positions_weights = torch.where(cell_positions_true[batch_index] != -1, 1, 0).float().to(device)
+                    ct_cell_atoms_weights = torch.where(cell_atoms_true[batch_index] != 0, 1, 0.1).float().to(device)
+                    
+                    # Find argmax of atoms
+                    cell_atoms_rec = torch.argmax(cell_atoms[batch_index], dim=1)
+                    
+                    # Remove atoms with atom number 0
+                    cell_positions_rec = cell_positions[batch_index][cell_atoms_rec != 0]
+                    cell_atoms_rec = cell_atoms_rec[cell_atoms_rec != 0]
+                    
+                    # Calculate loss
+                    ct_loss_cell_parameters = loss_fn_cell_parameters(cell_parameters[batch_index], cell_parameters_true[batch_index])
+                    ct_loss_cell_positions = loss_fn_cell_positions(cell_positions[batch_index], cell_positions_true[batch_index], ct_cell_positions_weights)
+                    ct_loss_cell_atoms = loss_fn_cell_atoms(cell_atoms[batch_index], ct_cell_atoms_true.long(), ct_cell_atoms_weights)
+                    ct_loss_kld = kld[batch_index].mean()
+                    ct_total_loss = torch.log(ct_loss_cell_parameters + ct_loss_cell_positions + ct_loss_cell_atoms) + (ct_loss_kld * beta)
+                    
+                    # Log the Crystal type dependent losses
+                    loss_CrystalType['total'].append(ct_total_loss.item())
+                    loss_CrystalType['cell_parameters'].append(ct_loss_cell_parameters.item())
+                    loss_CrystalType['cell_positions'].append(ct_loss_cell_positions.item())
+                    loss_CrystalType['cell_atoms'].append(ct_loss_cell_atoms.item())
+                    loss_CrystalType['kld'].append(ct_loss_kld.item())
+                    loss_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
+                    
+                    # Log the Crystal type dependent reconstructions
+                    reconstructions_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
+                    reconstructions_CrystalType['n_atoms'].append(len(cell_atoms_rec))
+                    reconstructions_CrystalType['n_oxygens'].append(torch.sum(cell_atoms_rec == 1).item())
+                    reconstructions_CrystalType['n_metals'].append(torch.sum(cell_atoms_rec == 2).item())
+                    reconstructions_CrystalType['cell_parameters'].append(cell_parameters_pred[batch_index].detach().cpu().tolist())
+                    reconstructions_CrystalType['cell_positions'].append(cell_positions_rec.detach().cpu().tolist())
+                    reconstructions_CrystalType['cell_atoms'].append(cell_atoms_rec.detach().cpu().tolist())
+                    reconstructions_CrystalType['latent_space_mean'].append(post_mean[batch_index].detach().cpu().tolist())
+                    reconstructions_CrystalType['latent_space_std'].append(post_log_std[batch_index].detach().cpu().tolist())
+                
                 # Ground truth
                 ground_truth_composition = create_cif(
                     cell_params = batch.y['cell_params'].view(-1, 6)[batch_index].detach().cpu().numpy(),
@@ -313,6 +372,20 @@ if __name__ == "__main__":
             f.write(f'Cell positions loss: {cell_positions_loss:.6f}\n')
             f.write(f'Cell atoms loss: {cell_atoms_loss:.6f}\n')
             f.write(f'KLD loss: {kld_loss:.6f}\n')
+            
+        # Saving crystal type dependent information
+        if setup_json['data']['name'] == 'CHILI-3K':
+            # Make folders
+            pathlib.Path(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/CrystalTypeAnalysis').mkdir(parents=True, exist_ok=True)
+            
+            # Save loss dicts as json
+            with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/CrystalTypeAnalysis/losses.json', 'w') as f:
+                json.dump(loss_CrystalType, f)
+                
+            # Save reconstructions
+            with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/CrystalTypeAnalysis/reconstructions.json', 'w') as f:
+                json.dump(reconstructions_CrystalType, f)
+            
 
     #%% Plot latent space
 
