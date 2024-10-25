@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "larger_encoding",
-    "experiment_description" : "Run with 32D latent space and larger encoding layers",
+    "experiment_name" : "larger_encoding_low_lr",
+    "experiment_description" : "Run with 32D latent space, larger encoding layers and lower lr",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -76,8 +76,8 @@
     },
     "training" : {
         "epochs" : 5000,
-        "learning_rate" : 1e-5,
-        "patience" : 50,
+        "learning_rate" : 1e-6,
+        "patience" : 100,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]
