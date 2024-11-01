@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "larger_encoding_low_lr",
-    "experiment_description" : "Run with 32D latent space, larger encoding layers and lower lr",
+    "experiment_name" : "3d_latentspace_larger_encoding_long",
+    "experiment_description" : "Long run with 3D latent space and larger encoding layers",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -59,7 +59,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 32,
+        "latent_dim" : 3,
         "out_dim" : null,
         "gnn_dim" : 128,
         "gnn_heads" : 1,
@@ -76,8 +76,8 @@
     },
     "training" : {
         "epochs" : 5000,
-        "learning_rate" : 1e-6,
-        "patience" : 100,
+        "learning_rate" : 1e-5,
+        "patience" : 150,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]

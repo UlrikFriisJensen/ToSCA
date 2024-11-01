@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=larger_encoding_low_lr
+#SBATCH --job-name=3d_latentspace_larger_encoding_long
 
-#SBATCH --ntasks=1 --cpus-per-task=12 --mem=6000M
+#SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
 #SBATCH -p gpu --gres=gpu:titanrtx:1
 
-#SBATCH --time=2-00:00:00
+#SBATCH --time=5-00:00:00
 
 #SBATCH -o ./slurm_outputs/scvae-%j.out #STDOUT
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/larger_encoding_low_lr/setup_json.json
+python test.py --test_data validation --setup_json ./models/3d_latentspace_larger_encoding_long/setup_json.json
