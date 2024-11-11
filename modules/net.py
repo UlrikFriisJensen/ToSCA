@@ -246,10 +246,12 @@ class SCVAE(nn.Module):
         
         # Ensure no zero variance
         offset = 1e-15
+        post_log_std = F.softplus(post_log_std) + offset
+        prior_log_std = F.softplus(prior_log_std) + offset
         
         # Reparameterization
-        posterior_dist = Independent(Normal(post_mean, F.softplus(post_log_std)+offset), 1)
-        prior_dist = Independent(Normal(prior_mean, F.softplus(prior_log_std)+offset), 1)
+        posterior_dist = Independent(Normal(post_mean, post_log_std), 1)
+        prior_dist = Independent(Normal(prior_mean, prior_log_std), 1)
         
         # Calculate KL divergence
         kld = kl_divergence(posterior_dist, prior_dist) / len(post_mean)
