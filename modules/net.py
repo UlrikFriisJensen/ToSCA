@@ -150,7 +150,7 @@ class SCVAE(nn.Module):
         # )
         
         self.shared_decoder = Sequential(
-            nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+            nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
             nn.ELU(),
             nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
             nn.ELU(),
@@ -161,13 +161,13 @@ class SCVAE(nn.Module):
         )
         
         self.cell_parameter_decoder = Sequential(
-            #nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
-            #nn.ELU(),
-            #nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
-            #nn.ELU(),
-            #nn.Linear(self.decoder_hidden_dim//4, 6),
+            nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
+            nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+            nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
 
-            nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
+            # nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
         )
         
         self.cell_position_decoder = Sequential(
@@ -222,9 +222,11 @@ class SCVAE(nn.Module):
         
     def decode(self, z):
         
-        z_shared = self.shared_decoder(z)
+        latent_split = self.latent_dim // 2
         
-        cell_parameters = self.cell_parameter_decoder(z_shared)
+        z_shared = self.shared_decoder(z[:, :latent_split])
+        
+        cell_parameters = self.cell_parameter_decoder(z[:, latent_split:])
         cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
         
         cell_positions = self.cell_position_decoder(z_shared)
