@@ -205,7 +205,7 @@ if __name__ == "__main__":
 
     # Setup logging file
     with open(f'{experiment_folder}/training_log.csv', 'w') as f:
-        f.write('epoch,train_loss,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld\n')
+        f.write('epoch,train_loss,train_loss_reconstruction,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_reconstruction,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld\n')
 
     # Load normalization factors
     if setup_json['data']['normalize_cell_parameters']:
@@ -250,6 +250,7 @@ if __name__ == "__main__":
 
         # Setup for logging loss
         train_loss = 0
+        train_loss_rec = 0
         train_loss_cell_parameters = 0
         train_loss_cell_positions = 0
         train_loss_cell_atoms = 0
@@ -340,7 +341,9 @@ if __name__ == "__main__":
             
             loss_kld = kld.mean()
             
-            total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
+            reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
+            
+            total_loss = torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -348,6 +351,7 @@ if __name__ == "__main__":
             
             # Store loss
             train_loss += total_loss.item()
+            train_loss_rec += reconstruction_loss.item()
             train_loss_cell_parameters += loss_cell_parameters.item()
             train_loss_cell_positions += loss_cell_positions.item()
             train_loss_cell_atoms += loss_cell_atoms.item()
@@ -355,6 +359,7 @@ if __name__ == "__main__":
         
         # Calculate average loss
         train_loss /= len(train_loader)
+        train_loss_rec /= len(train_loader)
         train_loss_cell_parameters /= len(train_loader)
         train_loss_cell_positions /= len(train_loader)
         train_loss_cell_atoms /= len(train_loader)
@@ -365,6 +370,7 @@ if __name__ == "__main__":
 
         # Setup for logging loss
         validation_loss = 0
+        validation_loss_rec = 0
         validation_loss_cell_parameters = 0
         validation_loss_cell_positions = 0
         validation_loss_cell_atoms = 0
@@ -452,10 +458,13 @@ if __name__ == "__main__":
             
             loss_kld = kld.mean()
             
-            total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
+            reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
+            
+            total_loss = torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Store loss
             validation_loss += total_loss.item()
+            validation_loss_rec += reconstruction_loss.item()
             validation_loss_cell_parameters += loss_cell_parameters.item()
             validation_loss_cell_positions += loss_cell_positions.item()
             validation_loss_cell_atoms += loss_cell_atoms.item()
@@ -463,16 +472,17 @@ if __name__ == "__main__":
 
         # Calculate average loss
         validation_loss /= len(validation_loader)
+        validation_loss_rec /= len(validation_loader)
         validation_loss_cell_parameters /= len(validation_loader)
         validation_loss_cell_positions /= len(validation_loader)
         validation_loss_cell_atoms /= len(validation_loader)
         validation_loss_kld /= len(validation_loader)
         
         # Check if model improved
-        if validation_loss < best_loss:
+        if validation_loss_rec < best_loss:
             patience_counter = 0
             best_epoch = epoch
-            best_loss = validation_loss
+            best_loss = validation_loss_rec
             torch.save(model.state_dict(), f'{experiment_folder}/best_model.pth')
         else:
             patience_counter += 1
@@ -482,11 +492,11 @@ if __name__ == "__main__":
         
         # Save loss in log file
         with open(f'{experiment_folder}/training_log.csv', 'a') as f:
-            f.write(f'{epoch},{train_loss},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld}\n')
+            f.write(f'{epoch},{train_loss},{train_loss_rec},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_rec},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld}\n')
 
 
         # Print progress
-        print(f'Epoch: {epoch} | Train loss: {train_loss:.2e} | Validation loss: {validation_loss:.2e} | Best loss: {best_loss:.2e} (Epoch {best_epoch}) | Patience: {patience_counter}/{patience}')
+        print(f'Epoch: {epoch} | Train loss: {train_loss:.2e} | Validation loss: {validation_loss:.2e} | Best reconstruction loss: {best_loss:.2e} (Epoch {best_epoch}) | Patience: {patience_counter}/{patience}')
 
     # Record date and time
     setup_json['experiment_end'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')

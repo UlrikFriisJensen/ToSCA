@@ -160,6 +160,7 @@ if __name__ == "__main__":
     #%% Test
     model.eval()
     test_loss = 0
+    test_reconstruction_loss = 0
     cell_parameters_loss = 0
     cell_positions_loss = 0
     cell_atoms_loss = 0
@@ -172,7 +173,7 @@ if __name__ == "__main__":
         # Logging for analysis of Crystal type dependent performance
         
         # Crystal type dependent losses
-        loss_CrystalType = {'total': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': []}
+        loss_CrystalType = {'total': [], 'reconstruction_loss': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': []}
         
         # Crystal type dependent reconstructions
         reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': []}
@@ -271,10 +272,12 @@ if __name__ == "__main__":
                     ct_loss_cell_positions = loss_fn_cell_positions(cell_positions[batch_index], cell_positions_true[batch_index], ct_cell_positions_weights)
                     ct_loss_cell_atoms = loss_fn_cell_atoms(cell_atoms[batch_index], ct_cell_atoms_true.long(), ct_cell_atoms_weights)
                     ct_loss_kld = kld[batch_index].mean()
-                    ct_total_loss = torch.log(ct_loss_cell_parameters + ct_loss_cell_positions + ct_loss_cell_atoms) + (ct_loss_kld * beta)
+                    ct_loss_rec = ct_loss_cell_parameters + ct_loss_cell_positions + ct_loss_cell_atoms
+                    ct_total_loss = torch.log(ct_loss_rec) + (ct_loss_kld * beta)
                     
                     # Log the Crystal type dependent losses
                     loss_CrystalType['total'].append(ct_total_loss.item())
+                    loss_CrystalType['reconstruction_loss'].append(ct_loss_rec.item())
                     loss_CrystalType['cell_parameters'].append(ct_loss_cell_parameters.item())
                     loss_CrystalType['cell_positions'].append(ct_loss_cell_positions.item())
                     loss_CrystalType['cell_atoms'].append(ct_loss_cell_atoms.item())
@@ -344,22 +347,27 @@ if __name__ == "__main__":
             
             loss_kld = kld.mean()
             
-            total_loss = torch.log(loss_cell_parameters + loss_cell_positions + loss_cell_atoms) + (loss_kld * beta)
+            loss_reconstruction = loss_cell_parameters + loss_cell_positions + loss_cell_atoms 
+            
+            total_loss = torch.log(loss_reconstruction) + (loss_kld * beta)
             
             # Store loss
             test_loss += total_loss.item()
+            test_reconstruction_loss = loss_reconstruction.item()
             cell_parameters_loss += loss_cell_parameters.item()
             cell_positions_loss += loss_cell_positions.item()
             cell_atoms_loss += loss_cell_atoms.item()
             kld_loss += loss_kld.item()
             
         test_loss /= len(data_loader)
+        test_reconstruction_loss /= len(data_loader)
         cell_parameters_loss /= len(data_loader)
         cell_positions_loss /= len(data_loader)
         cell_atoms_loss /= len(data_loader)
         kld_loss /= len(data_loader)
         
         print(f'Test loss: {test_loss:.4f}')
+        print(f'Reconstruction loss: {test_reconstruction_loss:.4f}')
         print(f'Cell parameters loss: {cell_parameters_loss:.4f}')
         print(f'Cell positions loss: {cell_positions_loss:.4f}')
         print(f'Cell atoms loss: {cell_atoms_loss:.4f}')
@@ -368,6 +376,7 @@ if __name__ == "__main__":
         # Save loss
         with open(f'{setup_json["model_root"]}/{setup_json["experiment_name"]}/{args.test_data}_loss.txt', 'w') as f:
             f.write(f'Test loss: {test_loss:.6f}\n')
+            f.write(f'Reconstruction loss: {test_reconstruction_loss:.6f}\n')
             f.write(f'Cell parameters loss: {cell_parameters_loss:.6f}\n')
             f.write(f'Cell positions loss: {cell_positions_loss:.6f}\n')
             f.write(f'Cell atoms loss: {cell_atoms_loss:.6f}\n')
@@ -448,6 +457,7 @@ if __name__ == "__main__":
     # Train loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     ax.plot(loss_data['epoch'], loss_data['train_loss'], label='Total')
+    ax.plot(loss_data['epoch'], loss_data['train_loss_reconstruction'], label='Reconstruction')
     ax.plot(loss_data['epoch'], loss_data['train_loss_cell_parameters'], label='Cell parameters')
     ax.plot(loss_data['epoch'], loss_data['train_loss_cell_positions'], label='Cell positions')
     ax.plot(loss_data['epoch'], loss_data['train_loss_cell_atoms'], label='Cell atoms')
@@ -462,6 +472,7 @@ if __name__ == "__main__":
     # Validation loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     ax.plot(loss_data['epoch'], loss_data['validation_loss'], label='Total')
+    ax.plot(loss_data['epoch'], loss_data['validation_loss_reconstruction'], label='Reconstruction')
     ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_parameters'], label='Cell parameters')
     ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_positions'], label='Cell positions')
     ax.plot(loss_data['epoch'], loss_data['validation_loss_cell_atoms'], label='Cell atoms')

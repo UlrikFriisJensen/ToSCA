@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "4d_latentspace_split_latent_rep",
+    "experiment_name" : "6d_ls_split_latent_rep",
     "experiment_description" : "Run with the latent representation being split between cell and positions",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -59,7 +59,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 4,
+        "latent_dim" : 6,
         "out_dim" : null,
         "gnn_dim" : 128,
         "gnn_heads" : 1,
