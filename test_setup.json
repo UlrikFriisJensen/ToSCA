@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "6d_ls_split_latent_rep",
-    "experiment_description" : "Run with the latent representation being split between cell and positions",
+    "experiment_name" : "3d_ls_split_decoding",
+    "experiment_description" : "Run with seperated decoders for cell params and content",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -59,7 +59,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 6,
+        "latent_dim" : 3,
         "out_dim" : null,
         "gnn_dim" : 128,
         "gnn_heads" : 1,
