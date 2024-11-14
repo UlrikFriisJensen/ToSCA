@@ -353,7 +353,7 @@ if __name__ == "__main__":
             
             # Store loss
             test_loss += total_loss.item()
-            test_reconstruction_loss = loss_reconstruction.item()
+            test_reconstruction_loss += loss_reconstruction.item()
             cell_parameters_loss += loss_cell_parameters.item()
             cell_positions_loss += loss_cell_positions.item()
             cell_atoms_loss += loss_cell_atoms.item()
