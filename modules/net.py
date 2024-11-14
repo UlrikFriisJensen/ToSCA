@@ -265,3 +265,4 @@ class SCVAE(nn.Module):
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
+    # TODO: Implement predict function using only the scattering data
