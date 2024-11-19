@@ -415,6 +415,10 @@ if __name__ == "__main__":
         pca = PCA(n_components=2)
         latent_space_2d_pca = pca.fit_transform(latent_space_means)
         
+        # Save PCA parameters
+        with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/pca_parameters.json', 'w') as f:
+            json.dump(pca.get_params(), f)
+        
         # Plot
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         sns.scatterplot(x=latent_space_2d_pca[:,0], y=latent_space_2d_pca[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
@@ -424,8 +428,12 @@ if __name__ == "__main__":
         fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_pca.png', dpi=300)
         
         # Reduce dimensions with t-SNE
-        tsne = TSNE(n_components=2)
+        tsne = TSNE(n_components=2, random_state=setup_json['random_seed'])
         latent_space_2d_tsne = tsne.fit_transform(latent_space_means)
+        
+        # Save t-SNE parameters
+        with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/tsne_parameters.json', 'w') as f:
+            json.dump(tsne.get_params(), f)
         
         # Plot
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))

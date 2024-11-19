@@ -90,7 +90,8 @@ class SCVAE(nn.Module):
         # ])
         
         self.linear_encoder = Sequential(
-            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3 + self.scattering_dim // 8, self.latent_dim*16),
+            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3, self.latent_dim*16),
+            # nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3 + self.scattering_dim // 8, self.latent_dim*16),
             nn.ELU(),
             nn.Linear(self.latent_dim*16, self.latent_dim*8),
             nn.ELU(),
@@ -161,13 +162,13 @@ class SCVAE(nn.Module):
         )
         
         self.cell_parameter_decoder = Sequential(
-            nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
-            nn.ELU(),
-            nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
-            nn.ELU(),
-            nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
+            # nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+            # nn.ELU(),
+            # nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+            # nn.ELU(),
+            # nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
 
-            # nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
+            nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
         )
         
         self.cell_position_decoder = Sequential(
@@ -196,10 +197,11 @@ class SCVAE(nn.Module):
         
         # z_graph = torch.cat((z_local, z_global), dim=1)
         
-        z_scattering = self.scattering_encoder(scattering)
-        z_scattering = z_scattering.squeeze(-1)
+        # z_scattering = self.scattering_encoder(scattering)
+        # z_scattering = z_scattering.squeeze(-1)
         
-        z_posterior = torch.cat((z_local, z_scattering), dim=1)
+        # z_posterior = torch.cat((z_local, z_scattering), dim=1)
+        z_posterior = z_local
         
         z_posterior = self.linear_encoder(z_posterior)
         
@@ -224,10 +226,10 @@ class SCVAE(nn.Module):
         
         # latent_split = self.latent_dim // 2
         
-        z_shared = z.clone()
-        z_shared = self.shared_decoder(z_shared) # z[:, :latent_split]
+        # z_shared = z.clone()
+        z_shared = self.shared_decoder(z) # z[:, :latent_split]
         
-        cell_parameters = self.cell_parameter_decoder(z) # z[:, latent_split:]
+        cell_parameters = self.cell_parameter_decoder(z_shared) # z[:, latent_split:]
         cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
         
         cell_positions = self.cell_position_decoder(z_shared)
@@ -265,4 +267,21 @@ class SCVAE(nn.Module):
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
-    # TODO: Implement predict function using only the scattering data
+    def predict(self, scattering):
+        # Prior encoder
+        prior_mean, prior_log_std = self.prior(scattering)
+        
+        # Ensure no zero variance
+        offset = 1e-15
+        prior_log_std = F.softplus(prior_log_std) + offset
+        
+        # Reparameterization
+        prior_dist = Independent(Normal(prior_mean, prior_log_std), 1)
+        
+        # Sample from distribution
+        z_sample = prior_dist.rsample()
+        
+        # Decoder
+        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample)
+        
+        return cell_parameters, cell_positions, cell_atoms, prior_mean, prior_log_std, z_sample
