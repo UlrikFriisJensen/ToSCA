@@ -79,7 +79,6 @@ class SCVAE(nn.Module):
         ])
         
         self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
-            nn.ELU(),
             (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
             (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
