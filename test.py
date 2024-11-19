@@ -291,7 +291,7 @@ if __name__ == "__main__":
                     loss_CrystalType['cell_atoms'].append(ct_loss_cell_atoms.item())
                     loss_CrystalType['kld'].append(ct_loss_kld.item())
                     loss_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
-                    loss_CrystalType['particleSize'].append(batch.y['np_size'][batch_index])
+                    loss_CrystalType['particleSize'].append(batch.y['np_size'][batch_index].item())
                     
                     # Log the Crystal type dependent reconstructions
                     reconstructions_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
@@ -458,12 +458,12 @@ if __name__ == "__main__":
         # Reduce dimensions with t-SNE
         tsne = TSNE(n_components=2, random_state=setup_json['random_seed'])
         latent_space_2d_tsne_posterior = tsne.fit_transform(ls_mean_posterior)
-        latent_space_2d_tsne_prior = tsne.transform(ls_mean_prior)
+        latent_space_2d_tsne_prior = tsne.fit_transform(ls_mean_prior)
         
         
         # Save t-SNE parameters
-        with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/tsne_parameters.json', 'w') as f:
-            json.dump(tsne.get_params(), f)
+        # with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/tsne_parameters.json', 'w') as f:
+        #     json.dump(tsne.get_params(), f)
         
         # Plot
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))

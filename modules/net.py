@@ -78,16 +78,17 @@ class SCVAE(nn.Module):
             #nn.ELU(),
         ])
         
-        # self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
-        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-        #     nn.ELU(),
-        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-        #     nn.ELU(),
-        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-        #     nn.ELU(),
-        #     (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
-        #     nn.ELU(),
-        # ])
+        self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
+            nn.ELU(),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            nn.ELU(),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            nn.ELU(),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            nn.ELU(),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            # nn.ELU(),
+        ])
         
         self.linear_encoder = Sequential(
             nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3, self.latent_dim*16),
@@ -187,21 +188,21 @@ class SCVAE(nn.Module):
     def encode(self, x, edge_index, edge_attr, batch, scattering):
         
         z_local = self.graph_encoder_local(x, edge_index, edge_attr)
-        # z_global = self.graph_encoder_global(z_local, edge_index, edge_attr)
+        z_global = self.graph_encoder_global(z_local, edge_index, edge_attr)
         
         z_local = torch.cat([global_mean_pool(z_local, batch), global_max_pool(z_local, batch), global_add_pool(z_local, batch)], dim=1)
         # z_local = self.local_aggregator(z_local, batch, dim_size=self.latent_dim*2)
         
-        # z_global = torch.cat([global_mean_pool(z_global, batch), global_max_pool(z_global, batch), global_add_pool(z_global, batch)], dim=1)
+        z_global = torch.cat([global_mean_pool(z_global, batch), global_max_pool(z_global, batch), global_add_pool(z_global, batch)], dim=1)
         # z_global = self.global_aggregator(z_global, batch, dim_size=self.latent_dim*2)
         
-        # z_graph = torch.cat((z_local, z_global), dim=1)
+        z_posterior = torch.cat((z_local, z_global), dim=1)
         
         # z_scattering = self.scattering_encoder(scattering)
         # z_scattering = z_scattering.squeeze(-1)
         
         # z_posterior = torch.cat((z_local, z_scattering), dim=1)
-        z_posterior = z_local
+        # z_posterior = z_local
         
         z_posterior = self.linear_encoder(z_posterior)
         
