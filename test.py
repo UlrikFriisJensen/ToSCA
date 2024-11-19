@@ -177,7 +177,7 @@ if __name__ == "__main__":
         # Logging for analysis of Crystal type dependent performance
         
         # Crystal type dependent losses
-        loss_CrystalType = {'total': [], 'reconstruction_loss': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': []}
+        loss_CrystalType = {'total': [], 'reconstruction_loss': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': [], 'particleSize': []}
         
         # Crystal type dependent reconstructions
         reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': []}
@@ -291,6 +291,7 @@ if __name__ == "__main__":
                     loss_CrystalType['cell_atoms'].append(ct_loss_cell_atoms.item())
                     loss_CrystalType['kld'].append(ct_loss_kld.item())
                     loss_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
+                    loss_CrystalType['particleSize'].append(batch.y['np_size'][batch_index])
                     
                     # Log the Crystal type dependent reconstructions
                     reconstructions_CrystalType['crystalType'].append(batch.y['crystal_type'][batch_index])
