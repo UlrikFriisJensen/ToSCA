@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_split_decoding_long",
-    "experiment_description" : "Run with seperated decoders for cell params and content",
+    "experiment_name" : "3d_ls_only_structure_posterior",
+    "experiment_description" : "Run with only structural information in the posterior network",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -77,7 +77,7 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 150,
+        "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]
