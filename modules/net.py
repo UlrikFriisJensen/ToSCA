@@ -79,18 +79,19 @@ class SCVAE(nn.Module):
         ])
         
         self.graph_encoder_global = pyg_Sequential('x, edge_index, edge_attr', [
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
             nn.ELU(),
-            (GATv2Conv(self.gnn_dim*self.gnn_heads, self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
+            (GATv2Conv(self.gnn_dim*self.gnn_heads*len(self.aggr_list), self.gnn_dim, heads=self.gnn_heads, concat=True, edge_dim=self.gnn_edge_dim), 'x, edge_index, edge_attr -> x'),
             # nn.ELU(),
         ])
         
         self.linear_encoder = Sequential(
-            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3, self.latent_dim*16),
+            # nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3, self.latent_dim*16),
+            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3*2, self.latent_dim*16),
             # nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3 + self.scattering_dim // 8, self.latent_dim*16),
             nn.ELU(),
             nn.Linear(self.latent_dim*16, self.latent_dim*8),
