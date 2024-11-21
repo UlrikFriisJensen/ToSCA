@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=3d_ls_only_scattering_posterior
+#SBATCH --job-name=3d_ls_only_scattering
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/3d_ls_only_scattering_posterior/setup_json.json
+python test.py --test_data validation --setup_json ./models/3d_ls_only_scattering/setup_json.json

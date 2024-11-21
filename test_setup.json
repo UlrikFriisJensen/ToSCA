@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_only_scattering_posterior",
-    "experiment_description" : "Run with only scattering information in the posterior network",
+    "experiment_name" : "3d_ls_only_scattering",
+    "experiment_description" : "Run with only scattering information in the network",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
