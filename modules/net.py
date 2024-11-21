@@ -103,11 +103,17 @@ class SCVAE(nn.Module):
         # )
         
         self.scattering_encoder = Sequential(
+            # GatedConv1d(6000, self.scattering_dim, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            # nn.ELU(),
+            # GatedConv1d(self.scattering_dim, self.scattering_dim // 4, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            # nn.ELU(),
+            # GatedConv1d(self.scattering_dim // 4, self.scattering_dim // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            
             GatedConv1d(6000, self.scattering_dim, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim, self.scattering_dim // 4, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(self.scattering_dim, self.scattering_dim // 2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim // 4, self.scattering_dim // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(self.scattering_dim // 2, self.scattering_dim // 4, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
             GatedConv1d(self.scattering_dim // 4, self.scattering_dim // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
@@ -218,8 +224,8 @@ class SCVAE(nn.Module):
         
         # prior_mean, prior_log_std = z_scattering.chunk(2, dim=-1)
         
-        prior_mean = 0
-        prior_log_std = 0
+        prior_mean = torch.zeros((scattering.size(dim=0), self.latent_dim))
+        prior_log_std = torch.zeros((scattering.size(dim=0), self.latent_dim))
         
         return prior_mean, prior_log_std
     
@@ -260,10 +266,10 @@ class SCVAE(nn.Module):
         
         # Reparameterization
         posterior_dist = Independent(Normal(post_mean, post_log_std), 1)
-        # prior_dist = Independent(Normal(prior_mean, prior_log_std), 1)
+        prior_dist = Independent(Normal(prior_mean, prior_log_std), 1)
         
         # Calculate KL divergence
-        kld = 0 #kl_divergence(posterior_dist, prior_dist) / len(post_mean)
+        kld = kl_divergence(posterior_dist, prior_dist) / len(post_mean)
         
         # Sample from distribution
         z_sample = posterior_dist.rsample()

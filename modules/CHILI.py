@@ -26,7 +26,8 @@ class CHILI(Dataset):
         dataset: str,
         transform: Optional[Callable] = None, 
         pre_transform: Optional[Callable] = None,
-        pre_filter: Optional[Callable] = None
+        pre_filter: Optional[Callable] = None,
+        unit_cell: bool = False,
     ) -> None:
         """
         Initializes CHILI dataset.
@@ -70,9 +71,13 @@ class CHILI(Dataset):
             # Make processed folder
             if not os.path.exists(os.path.join(self.root, "processed")):
                 os.mkdir(os.path.join(self.root, "processed"))
+            if not os.path.exists(os.path.join(self.root, "processed_unit_cell")):
+                os.mkdir(os.path.join(self.root, "processed_unit_cell"))
             self.process()
 
         self._indices = range(self.len())
+        
+        self.unit_cell = unit_cell
 
     @property
     def raw_file_names(self) -> List[str]:
@@ -239,6 +244,39 @@ class CHILI(Dataset):
                                 saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
                             ),
                         )
+                        
+                        # Create unit cell graph data object
+                        data_unit_cell = Data(
+                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            x = unit_cell_node_feat,
+                            edge_index = unit_cell_edge_index,
+                            edge_attr = unit_cell_edge_attr,
+                            pos_abs = unit_cell_pos_abs,
+                            pos_frac = unit_cell_pos_frac,
+                            
+                            y = dict(
+                                crystal_type=crystal_type,
+                                space_group_symbol=space_group_symbol,
+                                space_group_number=space_group_number,
+                                crystal_system=crystal_system,
+                                crystal_system_number=crystal_system_number,
+                                atomic_species=atomic_species,
+                                n_atomic_species=len(atomic_species),
+                                np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
+                                n_atoms=unit_cell_node_feat.shape[0],
+                                n_bonds=unit_cell_edge_index.shape[1],
+                                
+                                cell_params=cell_params.unsqueeze(0),
+                                
+                                # Scattering data
+                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32).unsqueeze(0),
+                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32).unsqueeze(0),
+                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32).unsqueeze(0),
+                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
+                            ),
+                        )
 
                         # Apply filters
                         if self.pre_filter is not None and not self.pre_filter(data):
@@ -247,9 +285,11 @@ class CHILI(Dataset):
                         # Apply transforms
                         if self.pre_transform is not None:
                             data = self.pre_transform(data)
+                            data_unit_cell = self.pre_transform(data_unit_cell)
 
                         # Save to `self.processed_dir`.
                         torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
+                        torch.save(data_unit_cell, os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
 
                         # Update index
                         idx += 1
@@ -311,7 +351,10 @@ class CHILI(Dataset):
             ValueError: If split is not recognized.
         """
         if split is None:
-            data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
+            if self.unit_cell:
+                data = torch.load(os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
+            else:
+                data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
         elif split.lower() == "train":
             data = self.train_set[idx]
         elif split.lower() in ["validation", "val"]:

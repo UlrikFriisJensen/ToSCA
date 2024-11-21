@@ -434,7 +434,6 @@ if __name__ == "__main__":
         # Reduce dimensions with PCA
         pca = PCA(n_components=2)
         latent_space_2d_pca_posterior = pca.fit_transform(ls_mean_posterior)
-        latent_space_2d_pca_prior = pca.transform(ls_mean_prior)
         
         # Save PCA parameters
         with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/pca_parameters.json', 'w') as f:
@@ -448,22 +447,19 @@ if __name__ == "__main__":
         fig.tight_layout()
         fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_pca_posterior.png', dpi=300)
         
-        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-        sns.scatterplot(x=latent_space_2d_pca_prior[:,0], y=latent_space_2d_pca_prior[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
-        ax.set_xlabel('PC 1')
-        ax.set_ylabel('PC 2')
-        fig.tight_layout()
-        fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_pca_prior.png', dpi=300)
+        if (sum(abs(ls_mean_prior)) > 1e-3).all():
+            latent_space_2d_pca_prior = pca.transform(ls_mean_prior)
+        
+            fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+            sns.scatterplot(x=latent_space_2d_pca_prior[:,0], y=latent_space_2d_pca_prior[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
+            ax.set_xlabel('PC 1')
+            ax.set_ylabel('PC 2')
+            fig.tight_layout()
+            fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_pca_prior.png', dpi=300)
         
         # Reduce dimensions with t-SNE
         tsne = TSNE(n_components=2, random_state=setup_json['random_seed'])
         latent_space_2d_tsne_posterior = tsne.fit_transform(ls_mean_posterior)
-        latent_space_2d_tsne_prior = tsne.fit_transform(ls_mean_prior)
-        
-        
-        # Save t-SNE parameters
-        # with open(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/tsne_parameters.json', 'w') as f:
-        #     json.dump(tsne.get_params(), f)
         
         # Plot
         fig, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -473,12 +469,15 @@ if __name__ == "__main__":
         fig.tight_layout()
         fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_tsne_posterior.png', dpi=300)
         
-        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-        sns.scatterplot(x=latent_space_2d_tsne_prior[:,0], y=latent_space_2d_tsne_prior[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
-        ax.set_xlabel('t-SNE dim 1')
-        ax.set_ylabel('t-SNE dim 2')
-        fig.tight_layout()
-        fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_tsne_prior.png', dpi=300)
+        if (sum(abs(ls_mean_prior)) > 1e-3).all():
+            latent_space_2d_tsne_prior = tsne.fit_transform(ls_mean_prior)
+        
+            fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+            sns.scatterplot(x=latent_space_2d_tsne_prior[:,0], y=latent_space_2d_tsne_prior[:,1], hue=sample_crystal_types, style=sample_crystal_types, ax=ax, palette='tab20')
+            ax.set_xlabel('t-SNE dim 1')
+            ax.set_ylabel('t-SNE dim 2')
+            fig.tight_layout()
+            fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/latent_space_tsne_prior.png', dpi=300)
     
     
     #%% Plot loss curves

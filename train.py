@@ -49,6 +49,7 @@ if __name__ == "__main__":
     dataset = CHILI(
         root=setup_json['data']['root'],
         dataset=setup_json['data']['name'],
+        unit_cell=setup_json['data']['use_unit_cell'],
     )
     
     # Load/create data splits
