@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "unit_cell_graph_test",
-    "experiment_description" : "Testing unit cell graphs as input to the model",
+    "experiment_name" : "unit_cell_graph_only_structure",
+    "experiment_description" : "Testing unit cell graphs as only input to the posterior model",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -76,7 +76,7 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 10,
+        "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
         "beta" : 0.5,

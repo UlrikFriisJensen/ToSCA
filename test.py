@@ -237,7 +237,9 @@ if __name__ == "__main__":
 
             if setup_json['data']['use_unit_cell']:
                 cell_positions_true = batch.pos_frac
+                cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
                 cell_atoms_true = batch.x[:,0]
+                cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
             else:
                 # Assign batch labels to unit cell positions
                 unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
