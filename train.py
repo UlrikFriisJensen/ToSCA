@@ -297,12 +297,6 @@ if __name__ == "__main__":
             # Node features
             batch_features = torch.cat((batch.x, batch_positions), dim=1)
             
-            # Pad graph elements to be the same size as the out_dim
-            if setup_json['data']['use_unit_cell']:
-                out_dim = setup_json['model']['out_dim']
-                batch_features = F.pad(batch_features, (0, out_dim - batch_features.size(0)), 'constant', 0)
-                batch_distances = F.pad(batch_distances, (0, out_dim - batch_distances.size(0)), 'constant', 0)
-
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = batch_features, 
@@ -315,9 +309,6 @@ if __name__ == "__main__":
             if setup_json['data']['use_unit_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
-                # Pad graph elements to be the same size as the out_dim
-                cell_positions_true = F.pad(cell_positions_true, (0, out_dim - cell_positions_true.size(0)), 'constant', -1)
-                cell_atoms_true = F.pad(cell_atoms_true, (0, out_dim - cell_atoms_true.size(0)), 'constant', 0)
             else:
                 # Assign batch labels to unit cell positions
                 unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)

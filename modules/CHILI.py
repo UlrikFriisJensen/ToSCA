@@ -167,6 +167,12 @@ class CHILI(Dataset):
         Processes the raw data and saves the processed data.
         """
 
+        # Find largest number of unit cell atoms in the dataset
+        max_unit_cell_n_atoms = 0
+        for raw_path in self.raw_file_names:
+            _unit_cell_node_feat = torch.tensor(h5py.File(raw_path, "r")["UnitCellGraph"]["NodeFeatures"][:], dtype=torch.float32)
+            max_unit_cell_n_atoms = max(max_unit_cell_n_atoms, _unit_cell_node_feat.shape[0])
+        
         idx = 0
         process_pbar = tqdm(desc="Processing data...", total=len(self.raw_file_names), leave=False)
         for raw_path in self.raw_file_names:
@@ -245,14 +251,19 @@ class CHILI(Dataset):
                             ),
                         )
                         
+                        # Pad tensors to match the largest unit cell size in the dataset
+                        unit_cell_node_feat_padded = torch.nn.functional.pad(unit_cell_node_feat, (0, 0, 0, max_unit_cell_n_atoms - unit_cell_node_feat.shape[0]), "constant", 0)
+                        unit_cell_pos_abs_padded = torch.nn.functional.pad(unit_cell_pos_abs, (0, 0, 0, max_unit_cell_n_atoms - unit_cell_node_feat.shape[0]), "constant", 0)
+                        unit_cell_pos_frac_padded = torch.nn.functional.pad(unit_cell_pos_frac, (0, 0, 0, max_unit_cell_n_atoms - unit_cell_node_feat.shape[0]), "constant", -1)
+                        
                         # Create unit cell graph data object
                         data_unit_cell = Data(
                             data_id = raw_path.split(".")[0].split("/")[-1],
-                            x = unit_cell_node_feat,
+                            x = unit_cell_node_feat_padded,
                             edge_index = unit_cell_edge_index,
                             edge_attr = unit_cell_edge_attr,
-                            pos_abs = unit_cell_pos_abs,
-                            pos_frac = unit_cell_pos_frac,
+                            pos_abs = unit_cell_pos_abs_padded,
+                            pos_frac = unit_cell_pos_frac_padded,
                             
                             y = dict(
                                 crystal_type=crystal_type,
