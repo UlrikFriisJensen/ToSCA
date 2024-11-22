@@ -240,7 +240,6 @@ if __name__ == "__main__":
         distance_stds = torch.tensor(setup_json['data']['distance_normalization']['std']).float().to(device)
 
     beta = setup_json['training']['beta']
-    batch_size = setup_json['data']['batch_size']
     best_loss = np.inf
     patience = setup_json['training']['patience']
     patience_counter = 0
@@ -265,7 +264,7 @@ if __name__ == "__main__":
         for batch in tqdm(train_loader, desc='Training', leave=False, disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
-            
+            this_batch_size = batch.batch.amax().item() + 1
             # Zero gradients
             optimizer.zero_grad()
             
@@ -325,11 +324,11 @@ if __name__ == "__main__":
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
             # Reshape predictions
-            cell_positions = cell_positions.reshape(batch_size, out_dim, -1)
-            cell_positions_true = cell_positions_true.reshape(batch_size, out_dim, -1)
+            cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
+            cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
             
-            cell_atoms = cell_atoms.reshape(batch_size, out_dim, -1)
-            cell_atoms_true = cell_atoms_true.reshape(batch_size, -1).long()
+            cell_atoms = cell_atoms.reshape(-1, setup_json['model']['atom_output_dim'])
+            cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
             # Make loss weights
             cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
@@ -395,6 +394,7 @@ if __name__ == "__main__":
         for batch in tqdm(validation_loader, desc='Validation', leave=False, disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
+            this_batch_size = batch.batch.amax().item() + 1
             
             # Normalize scattering
             batch_scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1)
@@ -452,11 +452,11 @@ if __name__ == "__main__":
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
             # Reshape atom predictions
-            cell_positions = cell_positions.reshape(batch_size, out_dim, -1)
-            cell_positions_true = cell_positions_true.reshape(batch_size, out_dim, -1)
+            cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
+            cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
             
-            cell_atoms = cell_atoms.reshape(batch_size, out_dim, -1)
-            cell_atoms_true = cell_atoms_true.reshape(batch_size, -1).long()
+            cell_atoms = cell_atoms.reshape(-1, setup_json['model']['atom_output_dim'])
+            cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
             # Make loss weights
             cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)

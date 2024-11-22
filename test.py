@@ -84,7 +84,8 @@ if __name__ == "__main__":
     # Load CHILI dataset
     dataset = CHILI(
         root=setup_json['data']['root'],
-        dataset=setup_json['data']['name']
+        dataset=setup_json['data']['name'],
+        unit_cell=setup_json['data']['use_unit_cell'],
     )
     
     # Load data splits
@@ -156,6 +157,7 @@ if __name__ == "__main__":
         distance_stds = torch.tensor(setup_json['data']['distance_normalization']['std']).float().to(device)
 
     beta = setup_json['training']['beta']
+    out_dim = setup_json['model']['out_dim']
     
     #%% Test
     model.eval()
@@ -186,6 +188,7 @@ if __name__ == "__main__":
         for batch in tqdm(data_loader, desc='Testing', disable=setup_json['disable_tqdm']):
             # Put batch on device
             batch = batch.to(device)
+            this_batch_size = batch.batch.amax().item() + 1
             
             # Normalize scattering
             batch_scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1)
@@ -212,9 +215,12 @@ if __name__ == "__main__":
                 batch_distances = (batch_distances - distance_means) / distance_stds
             batch_distances = batch_distances.float()
             
+            # Node features
+            batch_features = torch.cat((batch.x, batch_positions), dim=1)
+            
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch_positions), dim=1), 
+                x = batch_features, 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
                 edge_attr = batch_distances, 
@@ -229,20 +235,23 @@ if __name__ == "__main__":
             ls_sample.extend(z_sample.cpu().tolist())
             sample_crystal_types.extend(batch.y['crystal_type'])
 
-            # Assign batch labels to unit cell positions
-            unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
-            index_sum = 0
-            for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
-                unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
-                index_sum += unit_cell_atoms
-            
-            cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
-            cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
-            
-            for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
-                cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
-                cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
-
+            if setup_json['data']['use_unit_cell']:
+                cell_positions_true = batch.pos_frac
+                cell_atoms_true = batch.x[:,0]
+            else:
+                # Assign batch labels to unit cell positions
+                unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+                index_sum = 0
+                for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                    unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                    index_sum += unit_cell_atoms
+                
+                cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+                cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                
+                for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                    cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
+                    cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
 
             # Denormalize cell parameters
             cell_parameters_pred = cell_parameters
@@ -327,8 +336,11 @@ if __name__ == "__main__":
                 except:
                     print(f'Failed to create CIF file for prediction of {ground_truth_composition} as a {batch.y["crystal_type"][batch_index]} structure')
 
-            # Reshape atom predictions
-            cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
+            # Reshape predictions
+            cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
+            cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
+            
+            cell_atoms = cell_atoms.reshape(-1, setup_json['model']['atom_output_dim'])
             cell_atoms_true = cell_atoms_true.reshape(-1).long()
             
             # Make loss weights
