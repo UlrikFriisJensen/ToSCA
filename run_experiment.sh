@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=3d_ls_only_scattering
+#SBATCH --job-name=unit_cell_graph_test
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -12,6 +12,6 @@
 hostname
 echo $CUDA_VISIBLE_DEVICES
 
-# python train.py --setup_json test_setup.json
+python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/3d_ls_only_scattering/setup_json.json
+python test.py --test_data validation --setup_json ./models/unit_cell_graph_test/setup_json.json

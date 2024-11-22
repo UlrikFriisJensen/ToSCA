@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_only_scattering",
-    "experiment_description" : "Run with only scattering information in the network",
+    "experiment_name" : "unit_cell_graph_test",
+    "experiment_description" : "Testing unit cell graphs as input to the model",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -76,7 +76,7 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 5000,
+        "epochs" : 10,
         "learning_rate" : 1e-5,
         "patience" : 50,
         "beta" : 0.0,

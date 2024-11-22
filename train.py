@@ -11,6 +11,7 @@ import datetime
 import pathlib
 from tqdm.auto import tqdm
 from modules.loss_functions import weighted_MSELoss, weighted_CrossEntropyLoss
+import torch.nn.functional as F
 
 #%% Suppress warnings
 warnings.filterwarnings("ignore")
@@ -84,7 +85,10 @@ if __name__ == "__main__":
     out_dim = 0
     if setup_json['model']['out_dim'] is None:
         for batch in train_loader:
-            _out_dim = torch.amax(batch.y['unit_cell_n_atoms'])
+            if setup_json['data']['use_unit_cell']:
+                _out_dim = torch.amax(batch.y['n_atoms'])
+            else:
+                _out_dim = torch.amax(batch.y['unit_cell_n_atoms'])
             if _out_dim > out_dim:
                 out_dim = _out_dim
         setup_json['model']['out_dim'] = out_dim.item()
@@ -290,28 +294,44 @@ if __name__ == "__main__":
                 batch_distances = (batch_distances - distance_means) / distance_stds
             batch_distances = batch_distances.float()
 
+            # Node features
+            batch_features = torch.cat((batch.x, batch_positions), dim=1)
+            
+            # Pad graph elements to be the same size as the out_dim
+            if setup_json['data']['use_unit_cell']:
+                out_dim = setup_json['model']['out_dim']
+                batch_features = F.pad(batch_features, (0, out_dim - batch_features.size(0)), 'constant', 0)
+                batch_distances = F.pad(batch_distances, (0, out_dim - batch_distances.size(0)), 'constant', 0)
+
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch_positions), dim=1), 
+                x = batch_features, 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
                 edge_attr = batch_distances, 
                 batch = batch.batch,
             )
             
-            # Assign batch labels to unit cell positions
-            unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
-            index_sum = 0
-            for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
-                unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
-                index_sum += unit_cell_atoms
-            
-            cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
-            cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+            if setup_json['data']['use_unit_cell']:
+                cell_positions_true = batch.pos_frac
+                cell_atoms_true = batch.x[:,0]
+                # Pad graph elements to be the same size as the out_dim
+                cell_positions_true = F.pad(cell_positions_true, (0, out_dim - cell_positions_true.size(0)), 'constant', -1)
+                cell_atoms_true = F.pad(cell_atoms_true, (0, out_dim - cell_atoms_true.size(0)), 'constant', 0)
+            else:
+                # Assign batch labels to unit cell positions
+                unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+                index_sum = 0
+                for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                    unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                    index_sum += unit_cell_atoms
+                
+                cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+                cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
 
-            for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
-                cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
-                cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+                for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                    cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
+                    cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
@@ -407,28 +427,44 @@ if __name__ == "__main__":
                 batch_distances = (batch_distances - distance_means) / distance_stds
             batch_distances = batch_distances.float()
             
+            # Node features
+            batch_features = torch.cat((batch.x, batch_positions), dim=1)
+            
+            # Pad graph elements to be the same size as the out_dim
+            if setup_json['data']['use_unit_cell']:
+                out_dim = setup_json['model']['out_dim']
+                batch_features = F.pad(batch_features, (0, out_dim - batch_features.size(0)), 'constant', 0)
+                batch_distances = F.pad(batch_distances, (0, out_dim - batch_distances.size(0)), 'constant', 0)
+            
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = torch.cat((batch.x, batch_positions), dim=1), 
+                x = batch_features, 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
                 edge_attr = batch_distances, 
                 batch = batch.batch,
             )
             
-            # Assign batch labels to unit cell positions
-            unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
-            index_sum = 0
-            for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
-                unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
-                index_sum += unit_cell_atoms
+            if setup_json['data']['use_unit_cell']:
+                cell_positions_true = batch.pos_frac
+                cell_atoms_true = batch.x[:,0]
+                # Pad graph elements to be the same size as the out_dim
+                cell_positions_true = F.pad(cell_positions_true, (0, out_dim - cell_positions_true.size(0)), 'constant', -1)
+                cell_atoms_true = F.pad(cell_atoms_true, (0, out_dim - cell_atoms_true.size(0)), 'constant', 0)
+            else:
+                # Assign batch labels to unit cell positions
+                unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+                index_sum = 0
+                for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                    unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                    index_sum += unit_cell_atoms
+                    
+                cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+                cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
                 
-            cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
-            cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
-            
-            for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
-                cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]               
-                cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+                for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                    cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]               
+                    cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
             # Reshape atom predictions
             cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
