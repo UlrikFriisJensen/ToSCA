@@ -297,6 +297,12 @@ if __name__ == "__main__":
             # Node features
             batch_features = torch.cat((batch.x, batch_positions), dim=1)
             
+            print(batch_features.size())
+            print(batch.edge_index.size())
+            print(batch_scattering.size())
+            print(batch_distances.size())
+            print(batch.batch.size())
+            
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = batch_features, 
@@ -420,12 +426,6 @@ if __name__ == "__main__":
             
             # Node features
             batch_features = torch.cat((batch.x, batch_positions), dim=1)
-            
-            # Pad graph elements to be the same size as the out_dim
-            if setup_json['data']['use_unit_cell']:
-                out_dim = setup_json['model']['out_dim']
-                batch_features = F.pad(batch_features, (0, out_dim - batch_features.size(0)), 'constant', 0)
-                batch_distances = F.pad(batch_distances, (0, out_dim - batch_distances.size(0)), 'constant', 0)
             
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(

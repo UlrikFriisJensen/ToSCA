@@ -8,6 +8,7 @@ from torch_geometric.nn.aggr import MLPAggregation, SetTransformerAggregation, P
 from torch.nn import Sequential, Conv1d
 from torch.distributions import Independent, Normal
 from torch.distributions.kl import kl_divergence
+from torch_geometric.utils import to_dense_batch
 
 #%% Custom layers
 
@@ -204,6 +205,10 @@ class SCVAE(nn.Module):
         
         z_local = self.graph_encoder_local(x, edge_index, edge_attr)
         # z_global = self.graph_encoder_global(z_local, edge_index, edge_attr)
+        
+        z_local, _ = to_dense_batch(z_local, batch, max_num_nodes=self.out_dim, batch_size=batch.amax()+1)
+        z_local = z_local.contiguous().view(batch.amax()+1, -1)
+        z_local = self.graph_encoder_mlp(z_local)
         
         # z_local = torch.cat([global_mean_pool(z_local, batch), global_max_pool(z_local, batch), global_add_pool(z_local, batch)], dim=1)
         # z_local = self.local_aggregator(z_local, batch, dim_size=self.latent_dim*2)
