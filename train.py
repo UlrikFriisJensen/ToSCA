@@ -240,7 +240,7 @@ if __name__ == "__main__":
         distance_stds = torch.tensor(setup_json['data']['distance_normalization']['std']).float().to(device)
 
     beta = setup_json['training']['beta']
-    
+    batch_size = setup_json['data']['batch_size']
     best_loss = np.inf
     patience = setup_json['training']['patience']
     patience_counter = 0
@@ -297,12 +297,6 @@ if __name__ == "__main__":
             # Node features
             batch_features = torch.cat((batch.x, batch_positions), dim=1)
             
-            print(batch_features.size())
-            print(batch.edge_index.size())
-            print(batch_scattering.size())
-            print(batch_distances.size())
-            print(batch.batch.size())
-            
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = batch_features, 
@@ -330,9 +324,12 @@ if __name__ == "__main__":
                     cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
-            # Reshape atom predictions
-            cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
-            cell_atoms_true = cell_atoms_true.reshape(-1).long()
+            # Reshape predictions
+            cell_positions = cell_positions.reshape(batch_size, out_dim, -1)
+            cell_positions_true = cell_positions_true.reshape(batch_size, out_dim, -1)
+            
+            cell_atoms = cell_atoms.reshape(batch_size, out_dim, -1)
+            cell_atoms_true = cell_atoms_true.reshape(batch_size, -1).long()
             
             # Make loss weights
             cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
@@ -439,9 +436,6 @@ if __name__ == "__main__":
             if setup_json['data']['use_unit_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
-                # Pad graph elements to be the same size as the out_dim
-                cell_positions_true = F.pad(cell_positions_true, (0, out_dim - cell_positions_true.size(0)), 'constant', -1)
-                cell_atoms_true = F.pad(cell_atoms_true, (0, out_dim - cell_atoms_true.size(0)), 'constant', 0)
             else:
                 # Assign batch labels to unit cell positions
                 unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
@@ -458,8 +452,11 @@ if __name__ == "__main__":
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
             # Reshape atom predictions
-            cell_atoms = cell_atoms.reshape(-1, cell_atoms.size(-1))
-            cell_atoms_true = cell_atoms_true.reshape(-1).long()
+            cell_positions = cell_positions.reshape(batch_size, out_dim, -1)
+            cell_positions_true = cell_positions_true.reshape(batch_size, out_dim, -1)
+            
+            cell_atoms = cell_atoms.reshape(batch_size, out_dim, -1)
+            cell_atoms_true = cell_atoms_true.reshape(batch_size, -1).long()
             
             # Make loss weights
             cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
