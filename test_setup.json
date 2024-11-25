@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_unit_cell_graph",
-    "experiment_description" : "Run with 3d latent space and unit cell graphs",
+    "experiment_name" : "3d_ls_central_atom_graph",
+    "experiment_description" : "Run with graph of fixed number of central atoms",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -9,7 +9,7 @@
     "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-3K",
-        "use_unit_cell" : true,
+        "graph_type" : "central",
         "root" : "./data/",
         "split_strategy" : "stratified",
         "stratify_column" : "Crystal type",

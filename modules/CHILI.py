@@ -13,6 +13,7 @@ from glob import glob
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
+from torch_geometric.utils import subgraph
 from torch_geometric.data import Data, Dataset, download_url, extract_zip
 from tqdm.auto import tqdm
 
@@ -27,7 +28,7 @@ class CHILI(Dataset):
         transform: Optional[Callable] = None, 
         pre_transform: Optional[Callable] = None,
         pre_filter: Optional[Callable] = None,
-        unit_cell: bool = False,
+        graph_type: str = "",
     ) -> None:
         """
         Initializes CHILI dataset.
@@ -38,6 +39,7 @@ class CHILI(Dataset):
             transform (callable, optional): A function/transform to apply to the data.
             pre_transform (callable, optional): A function/transform to apply to the data before saving.
             pre_filter (callable, optional): A function that takes data and returns True if the data point should be included in the dataset.
+            graph_type (str, optional): Type of graph. Defaults to "".
         """
         # Create dataset folder if it does not exists
         if not os.path.exists(root):
@@ -73,11 +75,17 @@ class CHILI(Dataset):
                 os.mkdir(os.path.join(self.root, "processed"))
             if not os.path.exists(os.path.join(self.root, "processed_unit_cell")):
                 os.mkdir(os.path.join(self.root, "processed_unit_cell"))
+            if not os.path.exists(os.path.join(self.root, "processed_central")):
+                os.mkdir(os.path.join(self.root, "processed_central"))
             self.process()
 
         self._indices = range(self.len())
         
-        self.unit_cell = unit_cell
+        if graph_type not in ["", "unit_cell", "central"]:
+            raise ValueError(
+                'Graph type not recognized. Please use either "", "unit_cell" or "central"'
+            )
+        self.graph_type = graph_type
 
     @property
     def raw_file_names(self) -> List[str]:
@@ -144,6 +152,7 @@ class CHILI(Dataset):
             )
 
     def write_to_log(
+        self,
         log_file: str,
         s: str
     ) -> None:
@@ -210,6 +219,8 @@ class CHILI(Dataset):
                         node_feat = torch.tensor(h5f["DiscreteParticleGraphs"][key]["NodeFeatures"][:], dtype=torch.float32)
                         edge_index = torch.tensor(h5f["DiscreteParticleGraphs"][key]["EdgeDirections"][:],dtype=torch.long)
                         edge_attr = torch.tensor(h5f["DiscreteParticleGraphs"][key]["EdgeFeatures"][:], dtype=torch.float32)
+                        pos_abs = torch.tensor(h5f["DiscreteParticleGraphs"][key]["AbsoluteCoordinates"][:], dtype=torch.float32)
+                        pos_frac = torch.tensor(h5f["DiscreteParticleGraphs"][key]["FractionalCoordinates"][:], dtype=torch.float32)
 
                         # Create graph data object
                         data = Data(
@@ -217,8 +228,8 @@ class CHILI(Dataset):
                             x = node_feat,
                             edge_index = edge_index,
                             edge_attr = edge_attr,
-                            pos_abs = torch.tensor(h5f["DiscreteParticleGraphs"][key]["AbsoluteCoordinates"][:], dtype=torch.float32),
-                            pos_frac=torch.tensor(h5f["DiscreteParticleGraphs"][key]["FractionalCoordinates"][:], dtype=torch.float32),
+                            pos_abs = pos_abs,
+                            pos_frac = pos_frac,
                             
                             y=dict(
                                 crystal_type=crystal_type,
@@ -288,7 +299,69 @@ class CHILI(Dataset):
                                 saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
                             ),
                         )
+                        
+                        # Create graph of n most central atoms (n = max number of atoms in unit cell)
+                        # Calculate distance from origo to each atom
+                        dist = torch.norm(pos_abs, dim=1)
+                        # Sort atoms by distance from origo
+                        sorted_idx = torch.argsort(dist)
+                        selected_idx = sorted_idx[:max_unit_cell_n_atoms]
+                        discarded_idx = sorted_idx[max_unit_cell_n_atoms:]
+                        # Select n most central atoms
+                        central_node_feat = node_feat[selected_idx]
+                        central_pos_abs = pos_abs[selected_idx]
+                        central_pos_frac = pos_frac[selected_idx]
+                        # Select only bonds between the n most central atoms
+                        
+                        central_edge_index, central_edge_attr = subgraph(selected_idx, edge_index, edge_attr, relabel_nodes=True)
+                        
+                        # central_edge_index = edge_index[:, torch.isin(edge_index[0], selected_idx) & torch.isin(edge_index[1], selected_idx)]
+                        
+                        # central_edge_attr = edge_attr[torch.isin(edge_index[0], selected_idx) & torch.isin(edge_index[1], selected_idx)]
+                        # print(f"Selected_idx: {sorted(selected_idx)}\ncentral_edge_index_unique:{central_edge_index.unique()}\n\n")
+                        # Map old edge index to new edge index
+                        # edge_index_map = {old: new for new, old in enumerate(selected_idx)}
+                        # central_edge_index.apply_(lambda x: edge_index_map.get(x))
 
+                        data_central = Data(
+                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            x = central_node_feat,
+                            edge_index = central_edge_index,
+                            edge_attr = central_edge_attr,
+                            pos_abs = central_pos_abs,
+                            pos_frac = central_pos_frac,
+                            
+                            y=dict(
+                                crystal_type=crystal_type,
+                                space_group_symbol=space_group_symbol,
+                                space_group_number=space_group_number,
+                                crystal_system=crystal_system,
+                                crystal_system_number=crystal_system_number,
+                                atomic_species=atomic_species,#.unsqueeze(0),
+                                n_atomic_species=len(atomic_species),
+                                np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
+                                n_atoms=central_node_feat.shape[0],
+                                n_bonds=central_edge_index.shape[1],
+
+                                cell_params=cell_params.unsqueeze(0),
+                                unit_cell_x=unit_cell_node_feat,
+                                unit_cell_edge_index=unit_cell_edge_index,
+                                unit_cell_edge_attr=unit_cell_edge_attr,
+                                unit_cell_pos_abs=unit_cell_pos_abs,
+                                unit_cell_pos_frac=unit_cell_pos_frac,
+                                unit_cell_n_atoms=unit_cell_node_feat.shape[0],
+                                unit_cell_n_bonds=unit_cell_edge_index.shape[1],
+
+                                # Scattering data
+                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32).unsqueeze(0),
+                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32).unsqueeze(0),
+                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32).unsqueeze(0),
+                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
+                            ),
+                        )
+                        
                         # Apply filters
                         if self.pre_filter is not None and not self.pre_filter(data):
                             continue
@@ -301,6 +374,7 @@ class CHILI(Dataset):
                         # Save to `self.processed_dir`.
                         torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
                         torch.save(data_unit_cell, os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
+                        torch.save(data_central, os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
 
                         # Update index
                         idx += 1
@@ -309,7 +383,7 @@ class CHILI(Dataset):
                 process_pbar.update(1)
 
             except Exception as e:
-                self.write_to_log('processing_error_log.out', raw_path + '\n' + e + '\n')
+                self.write_to_log('processing_error_log.out', str(raw_path) + '\n' + str(e) + '\n')
 
         process_pbar.close()
 
@@ -362,8 +436,10 @@ class CHILI(Dataset):
             ValueError: If split is not recognized.
         """
         if split is None:
-            if self.unit_cell:
+            if self.graph_type == "unit_cell":
                 data = torch.load(os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
+            elif self.graph_type == "central":
+                data = torch.load(os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
             else:
                 data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
         elif split.lower() == "train":

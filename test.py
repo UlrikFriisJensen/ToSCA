@@ -85,7 +85,7 @@ if __name__ == "__main__":
     dataset = CHILI(
         root=setup_json['data']['root'],
         dataset=setup_json['data']['name'],
-        unit_cell=setup_json['data']['use_unit_cell'],
+        graph_type=setup_json['data']['graph_type'],
     )
     
     # Load data splits
@@ -235,7 +235,7 @@ if __name__ == "__main__":
             ls_sample.extend(z_sample.cpu().tolist())
             sample_crystal_types.extend(batch.y['crystal_type'])
 
-            if setup_json['data']['use_unit_cell']:
+            if setup_json['data']['graph_type'] == 'unit_cell':
                 cell_positions_true = batch.pos_frac
                 cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
                 cell_atoms_true = batch.x[:,0]

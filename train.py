@@ -50,7 +50,7 @@ if __name__ == "__main__":
     dataset = CHILI(
         root=setup_json['data']['root'],
         dataset=setup_json['data']['name'],
-        unit_cell=setup_json['data']['use_unit_cell'],
+        graph_type=setup_json['data']['graph_type'],
     )
     
     # Load/create data splits
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     out_dim = 0
     if setup_json['model']['out_dim'] is None:
         for batch in train_loader:
-            if setup_json['data']['use_unit_cell']:
+            if setup_json['data']['graph_type'] == 'unit_cell':
                 _out_dim = torch.amax(batch.y['n_atoms'])
             else:
                 _out_dim = torch.amax(batch.y['unit_cell_n_atoms'])
@@ -305,7 +305,7 @@ if __name__ == "__main__":
                 batch = batch.batch,
             )
             
-            if setup_json['data']['use_unit_cell']:
+            if setup_json['data']['graph_type'] == 'unit_cell':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
             else:
@@ -433,7 +433,7 @@ if __name__ == "__main__":
                 batch = batch.batch,
             )
             
-            if setup_json['data']['use_unit_cell']:
+            if setup_json['data']['graph_type'] == 'unit_cell':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
             else:
