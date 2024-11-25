@@ -218,11 +218,11 @@ class SCVAE(nn.Module):
         
         # z_posterior = torch.cat((z_local, z_global), dim=1)
         
-        # z_scattering = self.scattering_encoder(scattering)
-        # z_scattering = z_scattering.squeeze(-1)
+        z_scattering = self.scattering_encoder(scattering)
+        z_scattering = z_scattering.squeeze(-1)
         
-        # z_posterior = torch.cat((z_local, z_scattering), dim=1)
-        z_posterior = z_local
+        z_posterior = torch.cat((z_local, z_scattering), dim=1)
+        # z_posterior = z_local
         # z_posterior = z_scattering
         
         z_posterior = self.linear_encoder(z_posterior)

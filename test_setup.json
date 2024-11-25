@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "unit_cell_graph_only_structure",
-    "experiment_description" : "Testing unit cell graphs as only input to the posterior model",
+    "experiment_name" : "3d_unit_cell_graph",
+    "experiment_description" : "Run with 3d latent space and unit cell graphs",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
