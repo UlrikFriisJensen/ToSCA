@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "3d_unit_cell_graph",
+    "experiment_name" : "3d_ls_unit_cell_graph",
     "experiment_description" : "Run with 3d latent space and unit cell graphs",
     "experiment_start" : null,
     "experiment_end" : null,
