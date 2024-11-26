@@ -323,6 +323,9 @@ if __name__ == "__main__":
                     cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
             
+            # Free up memory related to batch
+            del batch, batch_scattering, batch_positions, batch_distances, batch_features
+            
             # Reshape predictions
             cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
             cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
@@ -370,7 +373,8 @@ if __name__ == "__main__":
             train_loss_cell_positions += loss_cell_positions.item()
             train_loss_cell_atoms += loss_cell_atoms.item()
             train_loss_kld += loss_kld.item()
-        
+            
+            
         # Calculate average loss
         train_loss /= len(train_loader)
         train_loss_rec /= len(train_loader)
@@ -450,6 +454,9 @@ if __name__ == "__main__":
                 for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
                     cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]               
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
+            
+            # Free up memory related to batch
+            del batch, batch_scattering, batch_positions, batch_distances, batch_features
             
             # Reshape atom predictions
             cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
