@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "3d_ls_central_atom_graph",
+    "experiment_name" : "3d_ls_central_atom_graph_bigger",
     "experiment_description" : "Run with graph of fixed number of central atoms",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -62,7 +62,7 @@
     "model" : {
         "latent_dim" : 3,
         "out_dim" : null,
-        "gnn_dim" : 128,
+        "gnn_dim" : 256,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
@@ -78,7 +78,7 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 50,
+        "patience" : 150,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]

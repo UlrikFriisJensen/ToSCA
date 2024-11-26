@@ -254,9 +254,6 @@ if __name__ == "__main__":
                 for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
                     cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]
                     cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
-
-            # Free up memory related to batch
-            del batch, batch_scattering, batch_positions, batch_distances, batch_features
             
             # Denormalize cell parameters
             cell_parameters_pred = cell_parameters
@@ -340,6 +337,9 @@ if __name__ == "__main__":
                     )
                 except:
                     print(f'Failed to create CIF file for prediction of {ground_truth_composition} as a {batch.y["crystal_type"][batch_index]} structure')
+            
+            # Free up memory related to batch
+            del batch, batch_scattering, batch_positions, batch_distances, batch_features
             
             # Reshape predictions
             cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)

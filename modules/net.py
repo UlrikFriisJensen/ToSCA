@@ -91,9 +91,9 @@ class SCVAE(nn.Module):
         # ])
         
         self.graph_encoder_mlp = Sequential(
-            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*self.out_dim, self.gnn_dim*2),
+            nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*self.out_dim, self.gnn_dim*4),
             nn.ELU(),
-            nn.Linear(self.gnn_dim*2, self.gnn_dim),
+            nn.Linear(self.gnn_dim*4, self.gnn_dim),
             nn.ELU(),
         )
         
@@ -103,13 +103,22 @@ class SCVAE(nn.Module):
             # nn.Linear(self.gnn_dim*self.gnn_heads*len(self.aggr_list)*3 + self.scattering_dim // 8, self.latent_dim*16),
             # nn.Linear(self.scattering_dim // 8, self.latent_dim*16),
             # nn.Linear(self.gnn_dim, self.latent_dim*16),
-            nn.Linear(self.gnn_dim + self.scattering_dim // 8, self.latent_dim*16),
+            
+            # nn.Linear(self.gnn_dim + self.scattering_dim // 8, self.latent_dim*16),
+            # nn.ELU(),
+            # nn.Linear(self.latent_dim*16, self.latent_dim*8),
+            # nn.ELU(),
+            # nn.Linear(self.latent_dim*8, self.latent_dim*4),
+            # nn.ELU(),
+            # nn.Linear(self.latent_dim*4, self.latent_dim*2),
+            
+            nn.Linear(self.gnn_dim + self.scattering_dim // 8, latent_dim*64),
             nn.ELU(),
-            nn.Linear(self.latent_dim*16, self.latent_dim*8),
+            nn.Linear(latent_dim*64, latent_dim*32),
             nn.ELU(),
-            nn.Linear(self.latent_dim*8, self.latent_dim*4),
+            nn.Linear(latent_dim*32, latent_dim*16),
             nn.ELU(),
-            nn.Linear(self.latent_dim*4, self.latent_dim*2),
+            nn.Linear(latent_dim*16, self.latent_dim*2),
         )
         
         self.scattering_encoder = Sequential(
