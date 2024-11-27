@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_central_atom_graph_bigger",
-    "experiment_description" : "Run with graph of fixed number of central atoms",
+    "experiment_name" : "3d_ls_central_atom_graph_bigger_beta1",
+    "experiment_description" : "Run with graph of fixed number of central atoms and stronger conditioning",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -79,7 +79,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 150,
-        "beta" : 0.5,
+        "beta" : 1,
         "simplified_atom_identities" : true,
         "ligands" : [8]
     }
