@@ -256,6 +256,9 @@ if __name__ == "__main__":
                         batch_index_mask = batch_indices == i
                         cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
                         cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                        
+                    cell_positions_true = cell_positions_true_padded
+                    cell_atoms_true = cell_atoms_true_padded
                 elif cell_atoms_true.size(0) > target_size:
                     raise ValueError('Number of atoms in central target graph is larger than expected')
             else:
