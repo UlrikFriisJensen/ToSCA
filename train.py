@@ -315,15 +315,17 @@ if __name__ == "__main__":
                 batch_indices = batch.batch
                 
                 target_size = out_dim * this_batch_size
-                
+
                 if cell_atoms_true.size(0) < target_size:
                     cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
                     cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
-                    
                     for i in range(this_batch_size):
                         batch_index_mask = batch_indices == i
                         cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
                         cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                        
+                    cell_positions_true = cell_positions_true_padded
+                    cell_atoms_true = cell_atoms_true_padded
                 elif cell_atoms_true.size(0) > target_size:
                     raise ValueError('Number of atoms in central target graph is larger than expected')                
             else:
