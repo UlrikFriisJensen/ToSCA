@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=32d_ls_cag_big
+#SBATCH --job-name=Central_atom_target_test
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/32d_ls_cag_big/setup_json.json
+python test.py --test_data validation --setup_json ./models/Central_atom_target_test/setup_json.json

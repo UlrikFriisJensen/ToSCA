@@ -81,11 +81,11 @@ class CHILI(Dataset):
 
         self._indices = range(self.len())
         
-        if graph_type not in ["", "unit_cell", "central"]:
+        if graph_type.split('_')[0] not in ["", "unit_cell", "central"]:
             raise ValueError(
                 'Graph type not recognized. Please use either "", "unit_cell" or "central"'
             )
-        self.graph_type = graph_type
+        self.graph_type = graph_type.split('_')[0]
 
     @property
     def raw_file_names(self) -> List[str]:

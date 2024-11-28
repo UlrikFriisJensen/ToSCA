@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "32d_ls_cag_big",
-    "experiment_description" : "Run with 32D latent space on graphs of a fixed number of central atoms",
+    "experiment_name" : "Central_atom_target_test",
+    "experiment_description" : "Test with graphs of a fixed number of central atoms as input and target",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -9,7 +9,7 @@
     "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-3K",
-        "graph_type" : "central",
+        "graph_type" : "central_target",
         "root" : "./data/",
         "split_strategy" : "stratified",
         "stratify_column" : "Crystal type",
@@ -60,7 +60,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 32,
+        "latent_dim" : 3,
         "out_dim" : null,
         "gnn_dim" : 256,
         "gnn_heads" : 1,
@@ -76,9 +76,9 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 5000,
+        "epochs" : 5,
         "learning_rate" : 1e-5,
-        "patience" : 150,
+        "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]

@@ -240,6 +240,24 @@ if __name__ == "__main__":
                 cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
                 cell_atoms_true = batch.x[:,0]
                 cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
+            elif setup_json['data']['graph_type'] == 'central_target':
+                cell_positions_true = batch.pos_frac
+                cell_atoms_true = batch.x[:,0]
+                
+                batch_indices = batch.batch
+                
+                target_size = out_dim * this_batch_size
+                
+                if cell_atoms_true.size(0) < target_size:
+                    cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
+                    cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                    
+                    for i in range(this_batch_size):
+                        batch_index_mask = batch_indices == i
+                        cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
+                        cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                elif cell_atoms_true.size(0) > target_size:
+                    raise ValueError('Number of atoms in central target graph is larger than expected')
             else:
                 # Assign batch labels to unit cell positions
                 unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
