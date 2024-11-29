@@ -16,6 +16,7 @@ from torch.utils.data import Subset
 from torch_geometric.utils import subgraph
 from torch_geometric.data import Data, Dataset, download_url, extract_zip
 from tqdm.auto import tqdm
+from ase import Atoms
 
 class CHILI(Dataset):
     """
@@ -306,22 +307,22 @@ class CHILI(Dataset):
                         # Sort atoms by distance from origo
                         sorted_idx = torch.argsort(dist)
                         selected_idx = sorted_idx[:max_unit_cell_n_atoms]
-                        discarded_idx = sorted_idx[max_unit_cell_n_atoms:]
                         # Select n most central atoms
                         central_node_feat = node_feat[selected_idx]
                         central_pos_abs = pos_abs[selected_idx]
-                        central_pos_frac = pos_frac[selected_idx]
+                        # central_pos_frac = pos_frac[selected_idx]
                         # Select only bonds between the n most central atoms
                         
                         central_edge_index, central_edge_attr = subgraph(selected_idx, edge_index, edge_attr, relabel_nodes=True)
                         
-                        # central_edge_index = edge_index[:, torch.isin(edge_index[0], selected_idx) & torch.isin(edge_index[1], selected_idx)]
+                        # Get fractional coordinates relative to the unit cell parameters
+                        atom_obj = Atoms(
+                            symbols = central_node_feat[:, 0].numpy(),
+                            positions = central_pos_abs.numpy(),
+                            cell = cell_params.numpy(),
+                        )
                         
-                        # central_edge_attr = edge_attr[torch.isin(edge_index[0], selected_idx) & torch.isin(edge_index[1], selected_idx)]
-                        # print(f"Selected_idx: {sorted(selected_idx)}\ncentral_edge_index_unique:{central_edge_index.unique()}\n\n")
-                        # Map old edge index to new edge index
-                        # edge_index_map = {old: new for new, old in enumerate(selected_idx)}
-                        # central_edge_index.apply_(lambda x: edge_index_map.get(x))
+                        central_pos_frac = torch.tensor(atom_obj.get_scaled_positions(), dtype=torch.float32)
 
                         data_central = Data(
                             data_id = raw_path.split(".")[0].split("/")[-1],
