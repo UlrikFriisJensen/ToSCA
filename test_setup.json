@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Central_atom_target",
-    "experiment_description" : "Run with graphs of a fixed number of central atoms as input and target",
+    "experiment_name" : "Central_atom_target_fixed_frac",
+    "experiment_description" : "Run with graphs of a fixed number of central atoms as input and target (w. fixed reference frame for fractional coordinates)",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
