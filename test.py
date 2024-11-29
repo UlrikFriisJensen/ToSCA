@@ -261,6 +261,9 @@ if __name__ == "__main__":
                     cell_atoms_true = cell_atoms_true_padded
                 elif cell_atoms_true.size(0) > target_size:
                     raise ValueError('Number of atoms in central target graph is larger than expected')
+                else:
+                    cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
+                    cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
             else:
                 # Assign batch labels to unit cell positions
                 unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
@@ -280,8 +283,6 @@ if __name__ == "__main__":
             cell_parameters_pred = cell_parameters
             if setup_json['data']['normalize_cell_parameters']:
                 cell_parameters_pred = (cell_parameters_pred * cell_stds) + cell_means
-
-            print(cell_atoms_true.size())
             
             # Create CIF files
             for batch_index in range(this_batch_size):
@@ -308,10 +309,6 @@ if __name__ == "__main__":
                     # Remove atoms with atom number 0
                     cell_positions_rec = cell_positions[batch_index][cell_atoms_rec != 0]
                     cell_atoms_rec = cell_atoms_rec[cell_atoms_rec != 0]
-                    
-                    print(cell_atoms[batch_index].size())
-                    print(ct_cell_atoms_true.size())
-                    print(ct_cell_atoms_weights.size())
                     
                     # Calculate loss
                     ct_loss_cell_parameters = loss_fn_cell_parameters(cell_parameters[batch_index], cell_parameters_true[batch_index])
