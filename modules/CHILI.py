@@ -82,9 +82,9 @@ class CHILI(Dataset):
 
         self._indices = range(self.len())
         
-        if graph_type.split('_')[0] not in ["", "unit_cell", "central"]:
+        if graph_type.split('_')[0] not in ["", "unit", "central", "super"]:
             raise ValueError(
-                'Graph type not recognized. Please use either "", "unit_cell" or "central"'
+                'Graph type not recognized. Please use either "", "unit_cell", "central" or "super_cell"'
             )
         self.graph_type = graph_type.split('_')[0]
 
@@ -311,8 +311,8 @@ class CHILI(Dataset):
                         central_node_feat = node_feat[selected_idx]
                         central_pos_abs = pos_abs[selected_idx]
                         # central_pos_frac = pos_frac[selected_idx]
-                        # Select only bonds between the n most central atoms
                         
+                        # Select subgraph containing central atoms
                         central_edge_index, central_edge_attr = subgraph(selected_idx, edge_index, edge_attr, relabel_nodes=True)
                         
                         # Get fractional coordinates relative to the unit cell parameters
@@ -343,6 +343,67 @@ class CHILI(Dataset):
                                 np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
                                 n_atoms=central_node_feat.shape[0],
                                 n_bonds=central_edge_index.shape[1],
+
+                                cell_params=cell_params.unsqueeze(0),
+                                unit_cell_x=unit_cell_node_feat,
+                                unit_cell_edge_index=unit_cell_edge_index,
+                                unit_cell_edge_attr=unit_cell_edge_attr,
+                                unit_cell_pos_abs=unit_cell_pos_abs,
+                                unit_cell_pos_frac=unit_cell_pos_frac,
+                                unit_cell_n_atoms=unit_cell_node_feat.shape[0],
+                                unit_cell_n_bonds=unit_cell_edge_index.shape[1],
+
+                                # Scattering data
+                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32).unsqueeze(0),
+                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32).unsqueeze(0),
+                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32).unsqueeze(0),
+                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
+                            ),
+                        )
+                        
+                        # Create super cell graph data object
+                        if len(unit_cell_node_feat) < max_unit_cell_n_atoms:
+                            atoms_unit_cell = Atoms(
+                                symbols = unit_cell_node_feat[:, 0].numpy(),
+                                scaled_positions = unit_cell_pos_frac.numpy(),
+                                cell = cell_params.numpy(),
+                            )
+                            
+                            # Create super cell
+                            n_cells_needed = max_unit_cell_n_atoms // len(unit_cell_node_feat) + 1
+                            
+                        elif len(unit_cell_node_feat) == max_unit_cell_n_atoms:
+                            super_cell_node_feat = unit_cell_node_feat
+                            super_cell_edge_index = unit_cell_edge_index
+                            super_cell_edge_attr = unit_cell_edge_attr
+                            super_cell_pos_abs = unit_cell_pos_abs 
+                            super_cell_pos_frac = unit_cell_pos_frac
+                        else:
+                            raise ValueError(
+                                'Unit cell atoms exceed expected maximum number of atoms in unit cell'
+                            )
+                        
+                        data_super_cell = Data(
+                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            x = super_cell_node_feat,
+                            edge_index = super_cell_edge_index,
+                            edge_attr = super_cell_edge_attr,
+                            pos_abs = super_cell_pos_abs,
+                            pos_frac = super_cell_pos_frac,
+                            
+                            y=dict(
+                                crystal_type=crystal_type,
+                                space_group_symbol=space_group_symbol,
+                                space_group_number=space_group_number,
+                                crystal_system=crystal_system,
+                                crystal_system_number=crystal_system_number,
+                                atomic_species=atomic_species,#.unsqueeze(0),
+                                n_atomic_species=len(atomic_species),
+                                np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
+                                n_atoms=super_cell_node_feat.shape[0],
+                                n_bonds=super_cell_edge_index.shape[1],
 
                                 cell_params=cell_params.unsqueeze(0),
                                 unit_cell_x=unit_cell_node_feat,
