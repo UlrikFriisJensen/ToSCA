@@ -13,7 +13,7 @@ from glob import glob
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
-from torch_geometric.utils import subgraph
+from torch_geometric.utils import subgraph, dense_to_sparse
 from torch_geometric.data import Data, Dataset, download_url, extract_zip
 from tqdm.auto import tqdm
 from ase import Atoms
@@ -78,15 +78,17 @@ class CHILI(Dataset):
                 os.mkdir(os.path.join(self.root, "processed_unit_cell"))
             if not os.path.exists(os.path.join(self.root, "processed_central")):
                 os.mkdir(os.path.join(self.root, "processed_central"))
+            if not os.path.exists(os.path.join(self.root, "processed_super_cell")):
+                os.mkdir(os.path.join(self.root, "processed_super_cell"))
             self.process()
 
         self._indices = range(self.len())
         
-        if graph_type.split('_')[0] not in ["", "unit", "central", "super"]:
+        if graph_type.split('-')[0] not in ["", "unit_cell", "central", "super_cell"]:
             raise ValueError(
                 'Graph type not recognized. Please use either "", "unit_cell", "central" or "super_cell"'
             )
-        self.graph_type = graph_type.split('_')[0]
+        self.graph_type = graph_type.split('-')[0]
 
     @property
     def raw_file_names(self) -> List[str]:
@@ -225,7 +227,7 @@ class CHILI(Dataset):
 
                         # Create graph data object
                         data = Data(
-                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            data_id = raw_path.split("/")[-1].split(".")[0],
                             x = node_feat,
                             edge_index = edge_index,
                             edge_attr = edge_attr,
@@ -270,7 +272,7 @@ class CHILI(Dataset):
                         
                         # Create unit cell graph data object
                         data_unit_cell = Data(
-                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            data_id = raw_path.split("/")[-1].split(".")[0],
                             x = unit_cell_node_feat_padded,
                             edge_index = unit_cell_edge_index,
                             edge_attr = unit_cell_edge_attr,
@@ -325,7 +327,7 @@ class CHILI(Dataset):
                         central_pos_frac = torch.tensor(atom_obj.get_scaled_positions(), dtype=torch.float32)
 
                         data_central = Data(
-                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            data_id = raw_path.split("/")[-1].split(".")[0],
                             x = central_node_feat,
                             edge_index = central_edge_index,
                             edge_attr = central_edge_attr,
@@ -365,14 +367,46 @@ class CHILI(Dataset):
                         
                         # Create super cell graph data object
                         if len(unit_cell_node_feat) < max_unit_cell_n_atoms:
-                            atoms_unit_cell = Atoms(
-                                symbols = unit_cell_node_feat[:, 0].numpy(),
-                                scaled_positions = unit_cell_pos_frac.numpy(),
-                                cell = cell_params.numpy(),
+                            super_cell_dims = cell_params[:3].amax() // cell_params[:3]
+                            
+                            n_unit_cell_atoms = unit_cell_node_feat.shape[0]
+                            n_super_cell_atoms = n_unit_cell_atoms * super_cell_dims.prod().long()
+                            
+                            if n_super_cell_atoms < max_unit_cell_n_atoms:
+                                super_cell_dims *= (max_unit_cell_n_atoms // n_super_cell_atoms).long() + 1
+                                
+                            # Calculate the needed expansion of the unit cell
+                            cell_translations = torch.stack(torch.where(torch.zeros(tuple(super_cell_dims.long().tolist())) == 0), dim=1)
+                            
+                            super_cell_pos_frac = []
+                            super_cell_node_feat = []
+                            for cell_translation in cell_translations:
+                                super_cell_pos_frac.extend(unit_cell_pos_frac + torch.tensor(cell_translation))
+                                super_cell_node_feat.extend(unit_cell_node_feat)
+                                
+                            super_cell_pos_frac = torch.stack(super_cell_pos_frac)
+                            super_cell_node_feat = torch.stack(super_cell_node_feat)
+                            
+                            center_distances = torch.norm(super_cell_pos_frac, dim=1)
+                            center_idx = torch.argsort(center_distances)[:max_unit_cell_n_atoms]
+                            
+                            super_cell_pos_frac = super_cell_pos_frac[center_idx]
+                            super_cell_node_feat = super_cell_node_feat[center_idx] 
+                            
+                            super_cell_atomsobj = Atoms(
+                                symbols = super_cell_node_feat[:, 0],
+                                scaled_positions = super_cell_pos_frac,
+                                cell = cell_params,
                             )
                             
-                            # Create super cell
-                            n_cells_needed = max_unit_cell_n_atoms // len(unit_cell_node_feat) + 1
+                            super_cell_pos_abs = torch.tensor(super_cell_atomsobj.get_positions(), dtype=torch.float32)
+                            
+                            super_cell_distances = torch.tensor(super_cell_atomsobj.get_all_distances(mic=True))
+                            super_cell_bond_mask = torch.zeros_like(super_cell_distances)
+                            for bond_length in unit_cell_edge_attr.unique():
+                                super_cell_bond_mask[(super_cell_distances > bond_length * 0.9) & (super_cell_distances < bond_length * 1.1)] = 1
+                            super_cell_distances = super_cell_distances * super_cell_bond_mask
+                            super_cell_edge_index, super_cell_edge_attr = dense_to_sparse(super_cell_distances)
                             
                         elif len(unit_cell_node_feat) == max_unit_cell_n_atoms:
                             super_cell_node_feat = unit_cell_node_feat
@@ -386,7 +420,7 @@ class CHILI(Dataset):
                             )
                         
                         data_super_cell = Data(
-                            data_id = raw_path.split(".")[0].split("/")[-1],
+                            data_id = raw_path.split("/")[-1].split(".")[0],
                             x = super_cell_node_feat,
                             edge_index = super_cell_edge_index,
                             edge_attr = super_cell_edge_attr,
@@ -437,6 +471,7 @@ class CHILI(Dataset):
                         torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
                         torch.save(data_unit_cell, os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
                         torch.save(data_central, os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
+                        torch.save(data_super_cell, os.path.join(self.processed_dir + '_super_cell', f"data_{idx}.pt"))
 
                         # Update index
                         idx += 1
@@ -502,6 +537,8 @@ class CHILI(Dataset):
                 data = torch.load(os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
             elif self.graph_type == "central":
                 data = torch.load(os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
+            elif self.graph_type == "super_cell":
+                data = torch.load(os.path.join(self.processed_dir + '_super_cell', f"data_{idx}.pt"))
             else:
                 data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
         elif split.lower() == "train":

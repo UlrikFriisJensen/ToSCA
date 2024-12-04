@@ -235,12 +235,12 @@ if __name__ == "__main__":
             ls_sample.extend(z_sample.cpu().tolist())
             sample_crystal_types.extend(batch.y['crystal_type'])
 
-            if setup_json['data']['graph_type'] == 'unit_cell':
+            if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
                 cell_atoms_true = batch.x[:,0]
                 cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
-            elif setup_json['data']['graph_type'] == 'central_target':
+            elif setup_json['data']['graph_type'] == 'central-target':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
                 
