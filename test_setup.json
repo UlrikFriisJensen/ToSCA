@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Central_atom_target_fixed_frac",
-    "experiment_description" : "Run with graphs of a fixed number of central atoms as input and target (w. fixed reference frame for fractional coordinates)",
+    "experiment_name" : "Super_cell_graph_test",
+    "experiment_description" : "Test with graphs of a super cell with the same number of atoms",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -9,7 +9,7 @@
     "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-3K",
-        "graph_type" : "central_target",
+        "graph_type" : "super_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
         "stratify_column" : "Crystal type",
@@ -76,7 +76,7 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 5000,
+        "epochs" : 5,
         "learning_rate" : 1e-5,
         "patience" : 50,
         "beta" : 0.5,
