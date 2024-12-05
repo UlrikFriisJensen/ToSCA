@@ -36,6 +36,11 @@ def create_cif(cell_params, cell_positions, cell_atoms, filename, prediction=Tru
     cell_positions = cell_positions[cell_atoms != 0]
     cell_atoms = cell_atoms[cell_atoms != 0]
     
+    # Remove atoms not in the unit cell
+    cell_atoms = cell_atoms[(cell_positions[:,0] < 0.95) & (cell_positions[:,1] < 0.95) & (cell_positions[:,2] < 0.95)]
+    cell_positions = cell_positions[(cell_positions[:,0] < 0.95) & (cell_positions[:,1] < 0.95) & (cell_positions[:,2] < 0.95)]
+    
+    
     if simplified_atom_identities:
         cell_atoms = np.where(cell_atoms == 1, 8, cell_atoms)
         cell_atoms = np.where(cell_atoms == 2, 26, cell_atoms)
@@ -283,6 +288,9 @@ if __name__ == "__main__":
             cell_parameters_pred = cell_parameters
             if setup_json['data']['normalize_cell_parameters']:
                 cell_parameters_pred = (cell_parameters_pred * cell_stds) + cell_means
+            
+            # Rounding positions to 5 decimals
+            cell_positions = torch.round(cell_positions, decimals=5)
             
             # Create CIF files
             for batch_index in range(this_batch_size):

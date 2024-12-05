@@ -520,6 +520,9 @@ if __name__ == "__main__":
                 # Map all other atom numbers to logit 2 (Metal)
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
+            # Rounding positions to 5 decimals
+            cell_positions = torch.round(cell_positions, decimals=5)
+            
             # Loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
             

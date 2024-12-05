@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_Super_cell",
-    "experiment_description" : "Run with graphs of a super cell with the same number of atoms",
+    "experiment_name" : "3d_ls_Super_cell_beta1",
+    "experiment_description" : "Run with graphs of a super cell with the same number of atoms and stronger conditioning",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -79,7 +79,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 0.5,
+        "beta" : 1.0,
         "simplified_atom_identities" : true,
         "ligands" : [8]
     }
