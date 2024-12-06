@@ -534,6 +534,9 @@ if __name__ == "__main__":
     # Load loss data
     loss_data = pd.read_csv(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/training_log.csv', sep=',')
 
+    finetuning_data = loss_data[loss_data['stage'] == 'Fine-tuning']
+    loss_data = loss_data[loss_data['stage'] == 'Training']
+    
     # Plot loss curves
 
     # Total loss
@@ -547,6 +550,17 @@ if __name__ == "__main__":
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/loss_curve.png', dpi=300)
 
+    # Fine-tuning total loss
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss'], label='Train loss')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss'], label='Validation loss')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    #ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_loss_curve.png', dpi=300)
+    
     # Train loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     ax.plot(loss_data['epoch'], loss_data['train_loss'], label='Total')
@@ -562,6 +576,21 @@ if __name__ == "__main__":
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/train_loss_components.png', dpi=300)
 
+    # Fine-tuning train loss components
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss'], label='Total')
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_reconstruction'], label='Reconstruction')
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_parameters'], label='Cell parameters')
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_positions'], label='Cell positions')
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_atoms'], label='Cell atoms')
+    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_kld'] * beta, label='KLD')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_train_loss_components.png', dpi=300)
+
     # Validation loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     ax.plot(loss_data['epoch'], loss_data['validation_loss'], label='Total')
@@ -576,5 +605,19 @@ if __name__ == "__main__":
     ax.legend()
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/validation_loss_components.png', dpi=300)
-
-
+    
+    # Fine-tuning validation loss components
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss'], label='Total')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_reconstruction'], label='Reconstruction')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_parameters'], label='Cell parameters')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_positions'], label='Cell positions')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_atoms'], label='Cell atoms')
+    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_kld'] * beta, label='KLD')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.set_yscale('log')
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_validation_loss_components.png', dpi=300)
+    
