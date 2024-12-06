@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_Super_cell_beta1",
-    "experiment_description" : "Run with graphs of a super cell with the same number of atoms and stronger conditioning",
+    "experiment_name" : "3d_ls_Super_cell_finetune_test",
+    "experiment_description" : "Run with graphs of a super cell with the same number of atoms and stronger conditioning. Fine-tuning of the prior encoder after convergence.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,

@@ -575,6 +575,9 @@ if __name__ == "__main__":
         print(f'Epoch: {epoch} | Train loss: {train_loss:.2e} | Validation loss: {validation_loss:.2e} | Best reconstruction loss: {best_loss:.2e} (Epoch {best_epoch}) | Patience: {patience_counter}/{patience}')
 
     ## Fine-tune the prior encoder 
+    
+    print('\nFine-tuning the prior encoder\n')
+    
     # Load best model
     model.load_state_dict(torch.load(f'{experiment_folder}/best_model.pth'))
     
