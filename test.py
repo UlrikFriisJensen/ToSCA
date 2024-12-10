@@ -227,7 +227,7 @@ if __name__ == "__main__":
             # Composition conditioning
             if not setup_json['training']['simplified_atom_identities']:
                 composition = torch.zeros(this_batch_size, setup_json['model']['atom_output_dim']).to(device)
-                elements_in_batch = batch.y['atomic_species']
+                elements_in_batch = batch.y['atomic_species'].long()
                 index_counter = 0
                 for i in range(this_batch_size):
                     n_elements = batch.y['n_atomic_species'][i]

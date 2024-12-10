@@ -260,6 +260,8 @@ class SCVAE(nn.Module):
 
         z_prior = torch.cat((z_scattering, z_composition), dim=1)
 
+        z_prior = self.prior_linear_encoder(z_prior)
+
         prior_mean, prior_log_std = z_prior.chunk(2, dim=-1)
         
         # prior_mean = torch.zeros((scattering.size(dim=0), self.latent_dim))
