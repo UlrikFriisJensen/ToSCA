@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_ls_Super_cell_composition_conditioning",
-    "experiment_description" : "Run with graphs of a super cell with the same number of atoms and stronger conditioning. Using all atom decoding and conditioning on the composition.",
+    "experiment_name" : "3d_ls_composition_conditioning",
+    "experiment_description" : "Run using all atom decoding and conditioning on the composition and weighting of atom predictions.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -79,7 +79,7 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 150,
+        "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : false,
         "ligands" : [8]

@@ -306,6 +306,7 @@ if __name__ == "__main__":
                     n_elements = batch.y['n_atomic_species'][i]
                     composition[i, elements_in_batch[index_counter:index_counter + n_elements]] = 1
                     index_counter += n_elements
+                composition[:, 0] = 1 
             else:
                 composition = None
             
@@ -471,6 +472,7 @@ if __name__ == "__main__":
                     n_elements = batch.y['n_atomic_species'][i]
                     composition[i, elements_in_batch[index_counter:index_counter + n_elements]] = 1
                     index_counter += n_elements
+                composition[:, 0] = 1 
             else:
                 composition = None
 

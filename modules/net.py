@@ -238,10 +238,12 @@ class SCVAE(nn.Module):
         
         z_scattering = self.scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
-        
-        z_composition = self.composition_encoder(composition)
 
-        z_posterior = torch.cat((z_local, z_scattering, z_composition), dim=1)
+        if composition == None:
+            z_posterior = torch.cat((z_local, z_scattering), dim=1)
+        else:
+            z_composition = self.composition_encoder(composition)
+            z_posterior = torch.cat((z_local, z_scattering, z_composition), dim=1)
         # z_posterior = torch.cat((z_local, z_scattering), dim=1)
         # z_posterior = z_local
         # z_posterior = z_scattering
@@ -255,10 +257,12 @@ class SCVAE(nn.Module):
     def prior(self, scattering, composition):
         z_scattering = self.prior_scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
-        
-        z_composition = self.prior_composition_encoder(composition)
 
-        z_prior = torch.cat((z_scattering, z_composition), dim=1)
+        if composition == None:
+            z_prior = z_scattering
+        else:
+            z_composition = self.prior_composition_encoder(composition)
+            z_prior = torch.cat((z_scattering, z_composition), dim=1)
 
         z_prior = self.prior_linear_encoder(z_prior)
 
@@ -274,7 +278,7 @@ class SCVAE(nn.Module):
         eps = torch.randn_like(std)
         return mean + eps * std
         
-    def decode(self, z):
+    def decode(self, z, composition):
         
         # latent_split = self.latent_dim // 2
         
@@ -289,6 +293,8 @@ class SCVAE(nn.Module):
         
         cell_atoms = self.cell_atom_decoder(z_shared)
         cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
+        if composition != None:
+            cell_atoms = cell_atoms + composition.unsqueeze(1)
         
         return cell_parameters, cell_positions, cell_atoms
 
@@ -315,7 +321,7 @@ class SCVAE(nn.Module):
         z_sample = posterior_dist.rsample()
         
         # Decoder        
-        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample)
+        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample, composition)
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
