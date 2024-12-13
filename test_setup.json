@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "3d_ls_composition_conditioning",
+    "experiment_name" : "3d_ls_composition_conditioning_beta1",
     "experiment_description" : "Run using all atom decoding and conditioning on the composition and weighting of atom predictions.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -80,7 +80,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 0.5,
+        "beta" : 1,
         "simplified_atom_identities" : false,
         "ligands" : [8]
     }
