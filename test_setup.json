@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "3d_ls_composition_conditioning_beta1",
+    "experiment_name" : "3d_composition_conditioning_larger_decoder",
     "experiment_description" : "Run using all atom decoding and conditioning on the composition and weighting of atom predictions.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -21,7 +21,7 @@
         "batch_size" : 8,
         "num_workers" : 8,
         "normalize_scattering" : true,
-        "normalize_cell_parameters" : true,
+        "normalize_cell_parameters" : false,
         "cell_normalization" : {
             "a" : {
                 "mean" : null,
@@ -71,17 +71,17 @@
         "scattering_stride" : 1,
         "scattering_padding" : 0,
         "composition_dim" : 256,
-        "decoder_hidden_dim" : 2048,
+        "decoder_hidden_dim" : 4096,
         "position_output_dim" : 3,
-        "atom_output_dim" : 119,
+        "atom_output_dim" : 3,
         "cell_output_dim" : 6
     },
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 1,
-        "simplified_atom_identities" : false,
+        "beta" : 0.5,
+        "simplified_atom_identities" : true,
         "ligands" : [8]
     }
 }
