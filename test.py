@@ -117,6 +117,7 @@ if __name__ == "__main__":
         scattering_kernel_size=setup_json['model']['scattering_kernel_size'],
         scattering_stride=setup_json['model']['scattering_stride'],
         scattering_padding=setup_json['model']['scattering_padding'],
+        composition_dim=setup_json['model']['composition_dim'],
         decoder_hidden_dim=setup_json['model']['decoder_hidden_dim'],
         position_output_dim=setup_json['model']['position_output_dim'],
         atom_output_dim=setup_json['model']['atom_output_dim'],
@@ -223,11 +224,25 @@ if __name__ == "__main__":
             # Node features
             batch_features = torch.cat((batch.x, batch_positions), dim=1)
             
+            # Composition conditioning
+            if not setup_json['training']['simplified_atom_identities']:
+                composition = torch.zeros(this_batch_size, setup_json['model']['atom_output_dim']).to(device)
+                elements_in_batch = batch.y['atomic_species'].long()
+                index_counter = 0
+                for i in range(this_batch_size):
+                    n_elements = batch.y['n_atomic_species'][i]
+                    composition[i, elements_in_batch[index_counter:index_counter + n_elements]] = 1
+                    index_counter += n_elements
+                composition[:, 0] = 1 
+            else:
+                composition = None
+
             # Forward pass
             cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
                 x = batch_features, 
                 edge_index = batch.edge_index, 
                 scattering = batch_scattering,
+                composition=composition,
                 edge_attr = batch_distances, 
                 batch = batch.batch,
             )

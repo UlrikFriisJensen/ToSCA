@@ -49,6 +49,7 @@ class SCVAE(nn.Module):
         scattering_kernel_size=1, 
         scattering_stride=1, 
         scattering_padding=0, 
+        composition_dim=64,
         decoder_hidden_dim=2048, 
         position_output_dim=3, 
         atom_output_dim=119, 
@@ -65,6 +66,7 @@ class SCVAE(nn.Module):
         self.scattering_kernel_size = scattering_kernel_size
         self.scattering_stride = scattering_stride
         self.scattering_padding = scattering_padding
+        self.composition_dim = composition_dim
         self.decoder_hidden_dim = decoder_hidden_dim
         self.position_output_dim = position_output_dim
         self.atom_output_dim = atom_output_dim
@@ -112,7 +114,15 @@ class SCVAE(nn.Module):
             # nn.ELU(),
             # nn.Linear(self.latent_dim*4, self.latent_dim*2),
             
-            nn.Linear(self.gnn_dim + self.scattering_dim // 8, latent_dim*64),
+            # nn.Linear(self.gnn_dim + self.scattering_dim // 8, latent_dim*64),
+            # nn.ELU(),
+            # nn.Linear(latent_dim*64, latent_dim*32),
+            # nn.ELU(),
+            # nn.Linear(latent_dim*32, latent_dim*16),
+            # nn.ELU(),
+            # nn.Linear(latent_dim*16, self.latent_dim*2),
+
+            nn.Linear(self.gnn_dim + self.scattering_dim // 8 + self.composition_dim // 2, latent_dim*64),
             nn.ELU(),
             nn.Linear(latent_dim*64, latent_dim*32),
             nn.ELU(),
@@ -138,6 +148,13 @@ class SCVAE(nn.Module):
             # nn.ELU(),
             # GatedConv1d(self.scattering_dim // 8, self.latent_dim*2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
         )
+
+        self.composition_encoder = Sequential(
+            nn.Linear(self.atom_output_dim, self.composition_dim),
+            nn.ELU(),
+            nn.Linear(self.composition_dim, self.composition_dim // 2),
+            nn.ELU(),
+        )
         
         self.prior_scattering_encoder = Sequential(
             GatedConv1d(6000, self.scattering_dim, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
@@ -148,34 +165,25 @@ class SCVAE(nn.Module):
             nn.ELU(),
             GatedConv1d(self.scattering_dim // 4, self.scattering_dim // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim // 8, self.latent_dim*2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            # GatedConv1d(self.scattering_dim // 8, self.latent_dim*2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
         )
-        
-        # self.local_aggregator = MLPAggregation(
-        #     in_channels = self.gnn_dim*self.gnn_heads, 
-        #     out_channels = self.latent_dim*2, 
-        #     max_num_elements = self.out_dim,
-        #     num_layers = 1
-        #     ).to(self.device)
-        
-        # self.local_aggregator = PowerMeanAggregation(
-        #     p=1.0,
-        #     learn=True,
-        #     channels=1,
-        # )
-        
-        # self.global_aggregator = MLPAggregation(
-        #     in_channels = self.gnn_dim*self.gnn_heads, 
-        #     out_channels = self.latent_dim*2, 
-        #     max_num_elements = self.out_dim,
-        #     num_layers = 1
-        #     ).to(self.device)
-        
-        # self.global_aggregator = PowerMeanAggregation(
-        #     p=1.0,
-        #     learn=True,
-        #     channels=1,
-        # )
+
+        self.prior_composition_encoder = Sequential(
+            nn.Linear(self.atom_output_dim, self.composition_dim),
+            nn.ELU(),
+            nn.Linear(self.composition_dim, self.composition_dim // 2),
+            nn.ELU(),
+        )
+
+        self.prior_linear_encoder = Sequential(
+            nn.Linear(self.scattering_dim // 8 + self.composition_dim // 2, latent_dim*64),
+            nn.ELU(),
+            nn.Linear(latent_dim*64, latent_dim*32),
+            nn.ELU(),
+            nn.Linear(latent_dim*32, latent_dim*16),
+            nn.ELU(),
+            nn.Linear(latent_dim*16, self.latent_dim*2),
+        )
         
         self.shared_decoder = Sequential(
             nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
@@ -211,7 +219,7 @@ class SCVAE(nn.Module):
         )
         
 
-    def encode(self, x, edge_index, edge_attr, batch, scattering):
+    def encode(self, x, edge_index, edge_attr, batch, scattering, composition):
         
         z_local = self.graph_encoder_local(x, edge_index, edge_attr)
         # z_global = self.graph_encoder_global(z_local, edge_index, edge_attr)
@@ -230,8 +238,13 @@ class SCVAE(nn.Module):
         
         z_scattering = self.scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
-        
-        z_posterior = torch.cat((z_local, z_scattering), dim=1)
+
+        if composition == None:
+            z_posterior = torch.cat((z_local, z_scattering), dim=1)
+        else:
+            z_composition = self.composition_encoder(composition)
+            z_posterior = torch.cat((z_local, z_scattering, z_composition), dim=1)
+        # z_posterior = torch.cat((z_local, z_scattering), dim=1)
         # z_posterior = z_local
         # z_posterior = z_scattering
         
@@ -241,11 +254,19 @@ class SCVAE(nn.Module):
         
         return post_mean, post_log_std
     
-    def prior(self, scattering):
+    def prior(self, scattering, composition):
         z_scattering = self.prior_scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
-        
-        prior_mean, prior_log_std = z_scattering.chunk(2, dim=-1)
+
+        if composition == None:
+            z_prior = z_scattering
+        else:
+            z_composition = self.prior_composition_encoder(composition)
+            z_prior = torch.cat((z_scattering, z_composition), dim=1)
+
+        z_prior = self.prior_linear_encoder(z_prior)
+
+        prior_mean, prior_log_std = z_prior.chunk(2, dim=-1)
         
         # prior_mean = torch.zeros((scattering.size(dim=0), self.latent_dim))
         # prior_log_std = torch.zeros((scattering.size(dim=0), self.latent_dim))
@@ -257,7 +278,7 @@ class SCVAE(nn.Module):
         eps = torch.randn_like(std)
         return mean + eps * std
         
-    def decode(self, z):
+    def decode(self, z, composition):
         
         # latent_split = self.latent_dim // 2
         
@@ -272,15 +293,17 @@ class SCVAE(nn.Module):
         
         cell_atoms = self.cell_atom_decoder(z_shared)
         cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
+        if composition != None:
+            cell_atoms = cell_atoms + composition.unsqueeze(1)
         
         return cell_parameters, cell_positions, cell_atoms
 
-    def forward(self, x, edge_index, scattering, edge_attr=None, batch=None):
+    def forward(self, x, edge_index, scattering, composition, edge_attr=None, batch=None):
         # Posterior encoder
-        post_mean, post_log_std = self.encode(x, edge_index, edge_attr, batch, scattering)
+        post_mean, post_log_std = self.encode(x, edge_index, edge_attr, batch, scattering, composition)
         
         # Prior encoder
-        prior_mean, prior_log_std = self.prior(scattering)
+        prior_mean, prior_log_std = self.prior(scattering, composition)
         
         # Ensure no zero variance
         offset = 1e-15
@@ -298,7 +321,7 @@ class SCVAE(nn.Module):
         z_sample = posterior_dist.rsample()
         
         # Decoder        
-        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample)
+        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample, composition)
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
