@@ -70,7 +70,7 @@
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
-        "composition_dim" : 256,
+        "composition_dim" : 0,
         "decoder_hidden_dim" : 4096,
         "position_output_dim" : 3,
         "atom_output_dim" : 3,
