@@ -5,7 +5,7 @@
 
 #SBATCH -p gpu --gres=gpu:titanrtx:1
 
-#SBATCH --time=3-00:00:00
+#SBATCH --time=2-00:00:00
 
 #SBATCH -o ./slurm_outputs/scvae-%j.out #STDOUT
 
