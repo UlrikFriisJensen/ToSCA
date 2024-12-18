@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "3d_larger_prior",
+    "experiment_name" : "3d_larger_prior_beta1",
     "experiment_description" : "Run a larger prior network.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -81,7 +81,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 0.5,
+        "beta" : 1,
         "simplified_atom_identities" : true,
         "ligands" : [8]
     }
