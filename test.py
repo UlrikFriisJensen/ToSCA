@@ -109,6 +109,7 @@ if __name__ == "__main__":
     model = SCVAE(
         latent_dim=setup_json['model']['latent_dim'],
         out_dim=setup_json['model']['out_dim'],
+        prior_factor=setup_json['model']['prior_factor'],
         gnn_dim=setup_json['model']['gnn_dim'],
         gnn_heads=setup_json['model']['gnn_heads'],
         gnn_edge_dim=setup_json['model']['gnn_edge_dim'],

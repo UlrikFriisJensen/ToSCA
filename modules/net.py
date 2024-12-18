@@ -41,6 +41,7 @@ class SCVAE(nn.Module):
         self, 
         latent_dim=128, 
         out_dim=50, 
+        prior_factor=1,
         gnn_dim=64, 
         gnn_heads=1, 
         gnn_edge_dim=1, 
@@ -58,6 +59,7 @@ class SCVAE(nn.Module):
         super(SCVAE, self).__init__()
         self.latent_dim = latent_dim
         self.out_dim = out_dim
+        self.prior_factor = prior_factor
         self.gnn_dim = gnn_dim
         self.gnn_heads = gnn_heads
         self.gnn_edge_dim = gnn_edge_dim
@@ -157,26 +159,26 @@ class SCVAE(nn.Module):
         )
         
         self.prior_scattering_encoder = Sequential(
-            GatedConv1d(6000, self.scattering_dim, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(6000, self.scattering_dim * self.prior_factor, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim, self.scattering_dim // 2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(self.scattering_dim * self.prior_factor, self.scattering_dim * self.prior_factor // 2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim // 2, self.scattering_dim // 4, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(self.scattering_dim * self.prior_factor // 2, self.scattering_dim * self.prior_factor // 4, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
-            GatedConv1d(self.scattering_dim // 4, self.scattering_dim // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
+            GatedConv1d(self.scattering_dim * self.prior_factor // 4, self.scattering_dim * self.prior_factor // 8, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
             nn.ELU(),
             # GatedConv1d(self.scattering_dim // 8, self.latent_dim*2, self.scattering_kernel_size, self.scattering_stride, self.scattering_padding),
         )
 
         self.prior_composition_encoder = Sequential(
-            nn.Linear(self.atom_output_dim, self.composition_dim),
+            nn.Linear(self.atom_output_dim, self.composition_dim * self.prior_factor),
             nn.ELU(),
-            nn.Linear(self.composition_dim, self.composition_dim // 2),
+            nn.Linear(self.composition_dim * self.prior_factor, self.composition_dim * self.prior_factor // 2),
             nn.ELU(),
         )
 
         self.prior_linear_encoder = Sequential(
-            nn.Linear(self.scattering_dim // 8 + self.composition_dim // 2, latent_dim*64),
+            nn.Linear(self.scattering_dim * self.prior_factor // 8 + self.composition_dim * self.prior_factor // 2, latent_dim*64),
             nn.ELU(),
             nn.Linear(latent_dim*64, latent_dim*32),
             nn.ELU(),

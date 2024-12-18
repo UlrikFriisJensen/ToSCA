@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_composition_conditioning_larger_decoder",
-    "experiment_description" : "Run using all atom decoding and conditioning on the composition and weighting of atom predictions.",
+    "experiment_name" : "3d_larger_prior",
+    "experiment_description" : "Run a larger prior network.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -19,9 +19,9 @@
             "test" : 0.1
             },
         "batch_size" : 8,
-        "num_workers" : 4,
+        "num_workers" : 6,
         "normalize_scattering" : true,
-        "normalize_cell_parameters" : false,
+        "normalize_cell_parameters" : true,
         "cell_normalization" : {
             "a" : {
                 "mean" : null,
@@ -62,6 +62,7 @@
     "model" : {
         "latent_dim" : 3,
         "out_dim" : null,
+        "prior_factor" : 2,
         "gnn_dim" : 256,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
@@ -71,7 +72,7 @@
         "scattering_stride" : 1,
         "scattering_padding" : 0,
         "composition_dim" : 0,
-        "decoder_hidden_dim" : 4096,
+        "decoder_hidden_dim" : 2048,
         "position_output_dim" : 3,
         "atom_output_dim" : 3,
         "cell_output_dim" : 6
