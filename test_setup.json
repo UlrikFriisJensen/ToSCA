@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "3d_larger_prior_beta1",
-    "experiment_description" : "Run a larger prior network.",
+    "experiment_name" : "test_4d_split_ls_super_cell",
+    "experiment_description" : "Run with split decoder using the unit cell super cell data.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -60,7 +60,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 3,
+        "latent_dim" : 4,
         "out_dim" : null,
         "prior_factor" : 2,
         "gnn_dim" : 256,
@@ -78,10 +78,10 @@
         "cell_output_dim" : 6
     },
     "training" : {
-        "epochs" : 5000,
+        "epochs" : 10,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 1,
+        "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]
     }

@@ -188,7 +188,8 @@ class SCVAE(nn.Module):
         )
         
         self.shared_decoder = Sequential(
-            nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+            # nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+            nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
             nn.ELU(),
             nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
             nn.ELU(),
@@ -199,13 +200,13 @@ class SCVAE(nn.Module):
         )
         
         self.cell_parameter_decoder = Sequential(
-            # nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
-            # nn.ELU(),
-            # nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
-            # nn.ELU(),
-            # nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
+            nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
+            nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+            nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
 
-            nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
+            # nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
         )
         
         self.cell_position_decoder = Sequential(
@@ -282,12 +283,12 @@ class SCVAE(nn.Module):
         
     def decode(self, z, composition):
         
-        # latent_split = self.latent_dim // 2
+        latent_split = self.latent_dim // 2
         
-        # z_shared = z.clone()
-        z_shared = self.shared_decoder(z) # z[:, :latent_split]
+        z_shared = z.clone()
+        z_shared = self.shared_decoder(z_shared[:, :latent_split]) # z_shared[:, :latent_split]
         
-        cell_parameters = self.cell_parameter_decoder(z_shared) # z[:, latent_split:]
+        cell_parameters = self.cell_parameter_decoder(z[:, latent_split:]) # z[:, latent_split:]
         cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
         
         cell_positions = self.cell_position_decoder(z_shared)
@@ -327,9 +328,9 @@ class SCVAE(nn.Module):
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
-    def predict(self, scattering):
+    def predict(self, scattering, composition):
         # Prior encoder
-        prior_mean, prior_log_std = self.prior(scattering)
+        prior_mean, prior_log_std = self.prior(scattering, composition)
         
         # Ensure no zero variance
         offset = 1e-15

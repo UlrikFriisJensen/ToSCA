@@ -248,6 +248,12 @@ if __name__ == "__main__":
                 batch = batch.batch,
             )
             
+            # Predict using the prior
+            prior_cell_parameters, prior_cell_positions, prior_cell_atoms, _, _, _ = model.predict(
+                scattering=batch_scattering,
+                composition=composition,
+            )
+            
             # Store latent space means
             ls_mean_posterior.extend(post_mean.cpu().tolist())
             ls_std_posterior.extend(post_log_std.exp().cpu().tolist())
@@ -385,7 +391,20 @@ if __name__ == "__main__":
                     )
                 except:
                     print(f'Failed to create CIF file for prediction of {ground_truth_composition} as a {batch.y["crystal_type"][batch_index]} structure')
-            
+
+                # Prior prediction
+                try:
+                    create_cif(
+                        cell_params = prior_cell_parameters[batch_index].detach().cpu().numpy(),
+                        cell_positions = prior_cell_positions[batch_index].detach().cpu().numpy(),
+                        cell_atoms = prior_cell_atoms[batch_index].detach().cpu().numpy(),
+                        filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}_prior',
+                        prediction=True,
+                        composition=ground_truth_composition,
+                        simplified_atom_identities=setup_json['training']['simplified_atom_identities'],
+                    )
+                except:
+                    print(f'Failed to create CIF file for prior prediction of {ground_truth_composition} as a {batch.y["crystal_type"][batch_index]} structure')
             # Free up memory related to batch
             del batch, batch_scattering, batch_positions, batch_distances, batch_features
             
@@ -432,6 +451,7 @@ if __name__ == "__main__":
             cell_positions_loss += loss_cell_positions.item()
             cell_atoms_loss += loss_cell_atoms.item()
             kld_loss += loss_kld.item()
+                
             
         test_loss /= len(data_loader)
         test_reconstruction_loss /= len(data_loader)
@@ -565,17 +585,6 @@ if __name__ == "__main__":
     ax.legend()
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/loss_curve.png', dpi=300)
-
-    # Fine-tuning total loss
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss'], label='Train loss')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss'], label='Validation loss')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    #ax.set_yscale('log')
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_loss_curve.png', dpi=300)
     
     # Train loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -592,21 +601,6 @@ if __name__ == "__main__":
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/train_loss_components.png', dpi=300)
 
-    # Fine-tuning train loss components
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss'], label='Total')
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_reconstruction'], label='Reconstruction')
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_parameters'], label='Cell parameters')
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_positions'], label='Cell positions')
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_cell_atoms'], label='Cell atoms')
-    ax.plot(finetuning_data['epoch'], finetuning_data['train_loss_kld'] * beta, label='KLD')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.set_yscale('log')
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_train_loss_components.png', dpi=300)
-
     # Validation loss components
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
     ax.plot(loss_data['epoch'], loss_data['validation_loss'], label='Total')
@@ -621,19 +615,4 @@ if __name__ == "__main__":
     ax.legend()
     fig.tight_layout()
     fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/validation_loss_components.png', dpi=300)
-    
-    # Fine-tuning validation loss components
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss'], label='Total')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_reconstruction'], label='Reconstruction')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_parameters'], label='Cell parameters')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_positions'], label='Cell positions')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_cell_atoms'], label='Cell atoms')
-    ax.plot(finetuning_data['epoch'], finetuning_data['validation_loss_kld'] * beta, label='KLD')
-    ax.set_xlabel('Epoch')
-    ax.set_ylabel('Loss')
-    ax.set_yscale('log')
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/finetuning_validation_loss_components.png', dpi=300)
     
