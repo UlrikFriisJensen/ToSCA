@@ -398,9 +398,9 @@ if __name__ == "__main__":
                         cell_params = prior_cell_parameters[batch_index].detach().cpu().numpy(),
                         cell_positions = prior_cell_positions[batch_index].detach().cpu().numpy(),
                         cell_atoms = prior_cell_atoms[batch_index].detach().cpu().numpy(),
-                        filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}_prior',
+                        filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
                         prediction=True,
-                        composition=ground_truth_composition,
+                        composition=ground_truth_composition + '_prior',
                         simplified_atom_identities=setup_json['training']['simplified_atom_identities'],
                     )
                 except:

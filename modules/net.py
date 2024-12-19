@@ -343,6 +343,6 @@ class SCVAE(nn.Module):
         z_sample = prior_dist.rsample()
         
         # Decoder
-        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample)
+        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample, composition)
         
         return cell_parameters, cell_positions, cell_atoms, prior_mean, prior_log_std, z_sample
