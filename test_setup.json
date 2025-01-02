@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "4d_split_ls_super_cell_unnormalizedCellParameters",
+    "experiment_name" : "6d_split_ls_super_cell_bigPrior",
     "experiment_description" : "Run with split decoder using the unit cell super cell data.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -21,7 +21,7 @@
         "batch_size" : 8,
         "num_workers" : 6,
         "normalize_scattering" : true,
-        "normalize_cell_parameters" : false,
+        "normalize_cell_parameters" : true,
         "cell_normalization" : {
             "a" : {
                 "mean" : null,
@@ -60,9 +60,9 @@
         }
     },
     "model" : {
-        "latent_dim" : 4,
+        "latent_dim" : 6,
         "out_dim" : null,
-        "prior_factor" : 2,
+        "prior_factor" : 4,
         "gnn_dim" : 256,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
