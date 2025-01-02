@@ -308,8 +308,10 @@ if __name__ == "__main__":
             
             # Denormalize cell parameters
             cell_parameters_pred = cell_parameters
+            prior_cell_parameters_pred = prior_cell_parameters
             if setup_json['data']['normalize_cell_parameters']:
                 cell_parameters_pred = (cell_parameters_pred * cell_stds) + cell_means
+                prior_cell_parameters_pred = (prior_cell_parameters_pred * cell_stds) + cell_means
             
             # Rounding positions to 5 decimals
             cell_positions = torch.round(cell_positions, decimals=5)
@@ -395,7 +397,7 @@ if __name__ == "__main__":
                 # Prior prediction
                 try:
                     create_cif(
-                        cell_params = prior_cell_parameters[batch_index].detach().cpu().numpy(),
+                        cell_params = prior_cell_parameters_pred[batch_index].detach().cpu().numpy(),
                         cell_positions = prior_cell_positions[batch_index].detach().cpu().numpy(),
                         cell_atoms = prior_cell_atoms[batch_index].detach().cpu().numpy(),
                         filename = f'{setup_json["model_root"]}{setup_json["experiment_name"]}/predictions/{batch.y["crystal_type"][batch_index]}',
