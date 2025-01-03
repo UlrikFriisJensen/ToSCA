@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=6d_split_ls_super_cell_bigPrior
+#SBATCH --job-name=6d_split_ls_super_cell_bigPrior_smallEncoder
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/6d_split_ls_super_cell_bigPrior/setup_json.json
+python test.py --test_data validation --setup_json ./models/6d_split_ls_super_cell_bigPrior_smallEncoder/setup_json.json
