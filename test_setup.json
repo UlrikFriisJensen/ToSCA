@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "6d_split_ls_super_cell_bigPrior_smallEncoder",
+    "experiment_name" : "4d_split_ls_super_cell_bigPrior_smallerEncoder",
     "experiment_description" : "Run with split decoder using the unit cell super cell data.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -60,14 +60,14 @@
         }
     },
     "model" : {
-        "latent_dim" : 6,
+        "latent_dim" : 4,
         "out_dim" : null,
         "prior_factor" : 4,
-        "gnn_dim" : 128,
+        "gnn_dim" : 64,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 512,
+        "scattering_dim" : 256,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
