@@ -242,7 +242,7 @@ class SCVAE(nn.Module):
         z_scattering = self.scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
 
-        if composition == None:
+        if composition is None:
             z_posterior = torch.cat((z_local, z_scattering), dim=1)
         else:
             z_composition = self.composition_encoder(composition)
@@ -261,7 +261,7 @@ class SCVAE(nn.Module):
         z_scattering = self.prior_scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
 
-        if composition == None:
+        if composition is None:
             z_prior = z_scattering
         else:
             z_composition = self.prior_composition_encoder(composition)
@@ -296,7 +296,7 @@ class SCVAE(nn.Module):
         
         cell_atoms = self.cell_atom_decoder(z_shared)
         cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
-        if composition != None:
+        if composition is not None:
             cell_atoms = cell_atoms + composition.unsqueeze(1)
         
         return cell_parameters, cell_positions, cell_atoms
