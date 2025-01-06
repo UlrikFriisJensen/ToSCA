@@ -296,7 +296,7 @@ class SCVAE(nn.Module):
         
         cell_atoms = self.cell_atom_decoder(z_shared)
         cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
-        if composition is not None:
+        if self.atom_output_dim == 119:
             cell_atoms = cell_atoms + composition.unsqueeze(1)
         
         return cell_parameters, cell_positions, cell_atoms
