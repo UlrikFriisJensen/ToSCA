@@ -152,7 +152,7 @@ class SCVAE(nn.Module):
         )
 
         self.composition_encoder = Sequential(
-            nn.Linear(self.atom_output_dim, self.composition_dim),
+            nn.Linear(119, self.composition_dim),
             nn.ELU(),
             nn.Linear(self.composition_dim, self.composition_dim // 2),
             nn.ELU(),
@@ -171,7 +171,7 @@ class SCVAE(nn.Module):
         )
 
         self.prior_composition_encoder = Sequential(
-            nn.Linear(self.atom_output_dim, self.composition_dim * self.prior_factor),
+            nn.Linear(119, self.composition_dim * self.prior_factor),
             nn.ELU(),
             nn.Linear(self.composition_dim * self.prior_factor, self.composition_dim * self.prior_factor // 2),
             nn.ELU(),
