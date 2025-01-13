@@ -264,6 +264,11 @@ if __name__ == "__main__":
                 cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
                 cell_atoms_true = batch.x[:,0]
                 cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
+            elif setup_json['data']['graph_type'] == 'combi':
+                cell_positions_true = batch.pos_frac_target
+                cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
+                cell_atoms_true = batch.x_target[:,0]
+                cell_atoms_true = cell_atoms_true.reshape(this_batch_size, out_dim).long()
             elif setup_json['data']['graph_type'] == 'central-target':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]

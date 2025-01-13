@@ -80,13 +80,15 @@ class CHILI(Dataset):
                 os.mkdir(os.path.join(self.root, "processed_central"))
             if not os.path.exists(os.path.join(self.root, "processed_super_cell")):
                 os.mkdir(os.path.join(self.root, "processed_super_cell"))
+            if not os.path.exists(os.path.join(self.root, "processed_combi")):
+                os.mkdir(os.path.join(self.root, "processed_combi"))
             self.process()
 
         self._indices = range(self.len())
         
-        if graph_type.split('-')[0] not in ["", "unit_cell", "central", "super_cell"]:
+        if graph_type.split('-')[0] not in ["", "unit_cell", "central", "super_cell", "combi"]:
             raise ValueError(
-                'Graph type not recognized. Please use either "", "unit_cell", "central" or "super_cell"'
+                'Graph type not recognized. Please use either "", "unit_cell", "central", "super_cell" or "combi"'
             )
         self.graph_type = graph_type.split('-')[0]
 
@@ -458,6 +460,52 @@ class CHILI(Dataset):
                             ),
                         )
                         
+                        # Create combined graph data object
+                        data_combi = Data(
+                            data_id = raw_path.split("/")[-1].split(".")[0],
+                            x = central_node_feat,
+                            edge_index = central_edge_index,
+                            edge_attr = central_edge_attr,
+                            pos_abs = central_pos_abs,
+                            pos_frac = central_pos_frac,
+                            
+                            x_target = super_cell_node_feat,
+                            edge_index_target = super_cell_edge_index,
+                            edge_attr_target = super_cell_edge_attr,
+                            pos_abs_target = super_cell_pos_abs,
+                            pos_frac_target = super_cell_pos_frac,
+                            
+                            y=dict(
+                                crystal_type=crystal_type,
+                                space_group_symbol=space_group_symbol,
+                                space_group_number=space_group_number,
+                                crystal_system=crystal_system,
+                                crystal_system_number=crystal_system_number,
+                                atomic_species=atomic_species,#.unsqueeze(0),
+                                n_atomic_species=len(atomic_species),
+                                np_size=h5f["DiscreteParticleGraphs"][key]["NP size (Å)"][()],
+                                n_atoms=super_cell_node_feat.shape[0],
+                                n_bonds=super_cell_edge_index.shape[1],
+
+                                cell_params=cell_params.unsqueeze(0),
+                                unit_cell_x=unit_cell_node_feat,
+                                unit_cell_edge_index=unit_cell_edge_index,
+                                unit_cell_edge_attr=unit_cell_edge_attr,
+                                unit_cell_pos_abs=unit_cell_pos_abs,
+                                unit_cell_pos_frac=unit_cell_pos_frac,
+                                unit_cell_n_atoms=unit_cell_node_feat.shape[0],
+                                unit_cell_n_bonds=unit_cell_edge_index.shape[1],
+
+                                # Scattering data
+                                nd=torch.tensor(h5f["ScatteringData"][key]["ND"][:], dtype=torch.float32).unsqueeze(0),
+                                xrd=torch.tensor(h5f["ScatteringData"][key]["XRD"][:], dtype=torch.float32).unsqueeze(0),
+                                nPDF=torch.tensor(h5f["ScatteringData"][key]["nPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                xPDF=torch.tensor(h5f["ScatteringData"][key]["xPDF"][:], dtype=torch.float32).unsqueeze(0),
+                                sans=torch.tensor(h5f["ScatteringData"][key]["SANS"][:], dtype=torch.float32).unsqueeze(0),
+                                saxs=torch.tensor(h5f["ScatteringData"][key]["SAXS"][:], dtype=torch.float32).unsqueeze(0),
+                            ),
+                        )
+                        
                         # Apply filters
                         if self.pre_filter is not None and not self.pre_filter(data):
                             continue
@@ -466,12 +514,16 @@ class CHILI(Dataset):
                         if self.pre_transform is not None:
                             data = self.pre_transform(data)
                             data_unit_cell = self.pre_transform(data_unit_cell)
+                            data_central = self.pre_transform(data_central)
+                            data_super_cell = self.pre_transform(data_super_cell)
+                            data_combi = self.pre_transform(data_combi)
 
                         # Save to `self.processed_dir`.
                         torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
                         torch.save(data_unit_cell, os.path.join(self.processed_dir + '_unit_cell', f"data_{idx}.pt"))
                         torch.save(data_central, os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
                         torch.save(data_super_cell, os.path.join(self.processed_dir + '_super_cell', f"data_{idx}.pt"))
+                        torch.save(data_combi, os.path.join(self.processed_dir + '_combi', f"data_{idx}.pt"))
 
                         # Update index
                         idx += 1
@@ -539,6 +591,8 @@ class CHILI(Dataset):
                 data = torch.load(os.path.join(self.processed_dir + '_central', f"data_{idx}.pt"))
             elif self.graph_type == "super_cell":
                 data = torch.load(os.path.join(self.processed_dir + '_super_cell', f"data_{idx}.pt"))
+            elif self.graph_type == "combi":
+                data = torch.load(os.path.join(self.processed_dir + '_combi', f"data_{idx}.pt"))
             else:
                 data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
         elif split.lower() == "train":

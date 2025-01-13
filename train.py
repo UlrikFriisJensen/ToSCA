@@ -321,6 +321,9 @@ if __name__ == "__main__":
             if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
+            elif setup_json['data']['graph_type'] == 'combi':
+                cell_positions_true = batch.pos_frac_target
+                cell_atoms_true = batch.x_target[:,0]
             elif setup_json['data']['graph_type'] == 'central-target':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
@@ -484,6 +487,9 @@ if __name__ == "__main__":
             if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
+            elif setup_json['data']['graph_type'] == 'combi':
+                cell_positions_true = batch.pos_frac_target
+                cell_atoms_true = batch.x_target[:,0]
             elif setup_json['data']['graph_type'] == 'central-target':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
