@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_feedback_decoding",
+    "experiment_name" : "Combined_data_feedback_decoding_bigDecoder",
     "experiment_description" : "Run with combined super cell and central graph. Predictions feed back into network",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -72,14 +72,14 @@
         "scattering_stride" : 1,
         "scattering_padding" : 0,
         "composition_dim" : 256,
-        "decoder_hidden_dim" : 2048,
+        "decoder_hidden_dim" : 4096,
         "position_output_dim" : 3,
         "atom_output_dim" : 3,
         "cell_output_dim" : 6
     },
     "training" : {
         "epochs" : 5000,
-        "learning_rate" : 1e-5,
+        "learning_rate" : 1e-4,
         "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
