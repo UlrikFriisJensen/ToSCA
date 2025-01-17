@@ -210,14 +210,14 @@ class SCVAE(nn.Module):
         )
         
         self.cell_position_decoder = Sequential(
-            # nn.Linear(self.decoder_hidden_dim, self.decoder_hidden_dim),
-            # nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim + self.cell_output_dim + self.out_dim*self.atom_output_dim, self.decoder_hidden_dim),
+            nn.ELU(),
             nn.Linear(self.decoder_hidden_dim, self.out_dim*self.position_output_dim),
         )
         
         self.cell_atom_decoder = Sequential(
-            # nn.Linear(self.decoder_hidden_dim, self.decoder_hidden_dim),
-            # nn.ELU(),
+            nn.Linear(self.decoder_hidden_dim + self.cell_output_dim, self.decoder_hidden_dim),
+            nn.ELU(),
             nn.Linear(self.decoder_hidden_dim, self.out_dim*self.atom_output_dim),
         )
         
@@ -287,17 +287,21 @@ class SCVAE(nn.Module):
         
         # z_shared = z.clone()
         z_shared = self.shared_decoder(z) # z_shared[:, :latent_split]
-        
-        cell_parameters = self.cell_parameter_decoder(z_shared) # z[:, latent_split:]
+
+        cell_parameters = self.cell_parameter_decoder(z_shared.clone()) # z[:, latent_split:]
+        z_shared = torch.cat((z_shared, cell_parameters.clone()), dim=1)
         cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
-        
-        cell_positions = self.cell_position_decoder(z_shared)
-        cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
-        
-        cell_atoms = self.cell_atom_decoder(z_shared)
+
+        cell_atoms = self.cell_atom_decoder(z_shared.clone())
+        z_shared = torch.cat((z_shared, cell_atoms.clone()), dim=1)
         cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
+
         if self.atom_output_dim == 119:
             cell_atoms = cell_atoms + composition.unsqueeze(1)
+
+        cell_positions = self.cell_position_decoder(z_shared.clone())
+        cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
+        
         
         return cell_parameters, cell_positions, cell_atoms
 

@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Combined_data_run_32d_lr-4",
-    "experiment_description" : "Run with combined super cell and central graph.",
+    "experiment_name" : "Combined_data_feedback_decoding",
+    "experiment_description" : "Run with combined super cell and central graph. Predictions feed back into network",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -60,7 +60,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 32,
+        "latent_dim" : 3,
         "out_dim" : null,
         "prior_factor" : 4,
         "gnn_dim" : 128,
@@ -79,7 +79,7 @@
     },
     "training" : {
         "epochs" : 5000,
-        "learning_rate" : 1e-4,
+        "learning_rate" : 1e-5,
         "patience" : 50,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
