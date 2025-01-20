@@ -350,7 +350,7 @@ if __name__ == "__main__":
                     ct_loss_cell_atoms = loss_fn_cell_atoms(cell_atoms[batch_index], ct_cell_atoms_true.long(), ct_cell_atoms_weights)
                     ct_loss_kld = kld[batch_index].mean()
                     ct_loss_rec = ct_loss_cell_parameters + ct_loss_cell_positions + ct_loss_cell_atoms
-                    ct_total_loss = torch.log(ct_loss_rec) + (ct_loss_kld * beta)
+                    ct_total_loss = torch.log(ct_loss_rec + (ct_loss_kld * beta)) #torch.log(ct_loss_rec) + (ct_loss_kld * beta)
                     
                     # Log the Crystal type dependent losses
                     loss_CrystalType['total'].append(ct_total_loss.item())
@@ -446,7 +446,7 @@ if __name__ == "__main__":
             
             loss_reconstruction = loss_cell_parameters + loss_cell_positions + loss_cell_atoms 
             
-            total_loss = torch.log(loss_reconstruction) + (loss_kld * beta)
+            total_loss = torch.log(loss_reconstruction + (loss_kld * beta)) #torch.log(loss_reconstruction) + (loss_kld * beta)
             
             # Store loss
             test_loss += total_loss.item()

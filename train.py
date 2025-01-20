@@ -396,7 +396,7 @@ if __name__ == "__main__":
             
             reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
             
-            total_loss = torch.log(reconstruction_loss) + (loss_kld * beta)
+            total_loss = torch.log(reconstruction_loss + (loss_kld * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -566,7 +566,7 @@ if __name__ == "__main__":
             
             reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
             
-            total_loss = torch.log(reconstruction_loss) + (loss_kld * beta)
+            total_loss = torch.log(reconstruction_loss + (loss_kld * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Store loss
             validation_loss += total_loss.item()
