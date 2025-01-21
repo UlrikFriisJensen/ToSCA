@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_allLogLoss",
+    "experiment_name" : "Combined_data_allAtoms",
     "experiment_description" : "Run with combined super cell and central graph. Testing size of encoder and decoder.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -60,7 +60,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 3,
+        "latent_dim" : 2,
         "out_dim" : null,
         "prior_factor" : 4,
         "gnn_dim" : 128,
@@ -74,15 +74,15 @@
         "composition_dim" : 256,
         "decoder_hidden_dim" : 2048,
         "position_output_dim" : 3,
-        "atom_output_dim" : 3,
+        "atom_output_dim" : 119,
         "cell_output_dim" : 6
     },
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 50,
-        "beta" : 0.5,
-        "simplified_atom_identities" : true,
+        "patience" : 150,
+        "beta" : 1,
+        "simplified_atom_identities" : false,
         "ligands" : [8]
     }
 }
