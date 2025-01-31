@@ -207,6 +207,8 @@ if __name__ == "__main__":
     # loss_fn_kld = torch.nn.KLDivLoss()
     loss_fn_cell_positions = weighted_MSELoss()
     loss_fn_cell_atoms = weighted_CrossEntropyLoss()
+    loss_fn_latent_mean = torch.nn.MSELoss()
+    loss_fn_latent_std = torch.nn.MSELoss()
         
     #%% Train model
 
@@ -394,9 +396,12 @@ if __name__ == "__main__":
             
             loss_kld = kld.mean()
             
+            loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+            loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+            
             reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
             
-            total_loss = torch.log(reconstruction_loss + (loss_kld * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
+            total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -564,9 +569,12 @@ if __name__ == "__main__":
             
             loss_kld = kld.mean()
             
+            loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+            loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+            
             reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
             
-            total_loss = torch.log(reconstruction_loss + (loss_kld * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
+            total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Store loss
             validation_loss += total_loss.item()

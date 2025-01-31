@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Combined_data_allAtoms
+#SBATCH --job-name=Combined_data_harsher_normalization
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -14,4 +14,4 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/Combined_data_allAtoms/setup_json.json
+python test.py --test_data validation --setup_json ./models/Combined_data_harsher_normalization/setup_json.json

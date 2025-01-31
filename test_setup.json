@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Combined_data_allAtoms",
-    "experiment_description" : "Run with combined super cell and central graph. Testing size of encoder and decoder.",
+    "experiment_name" : "Combined_data_harsher_normalization",
+    "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -74,15 +74,15 @@
         "composition_dim" : 256,
         "decoder_hidden_dim" : 2048,
         "position_output_dim" : 3,
-        "atom_output_dim" : 119,
+        "atom_output_dim" : 3,
         "cell_output_dim" : 6
     },
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 150,
-        "beta" : 1,
-        "simplified_atom_identities" : false,
+        "beta" : 0.5,
+        "simplified_atom_identities" : true,
         "ligands" : [8]
     }
 }
