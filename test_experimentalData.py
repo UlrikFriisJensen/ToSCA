@@ -107,7 +107,7 @@ if __name__ == "__main__":
         # Translate composition to atom numbers
         composition = Atoms(symbols=composition).get_atomic_numbers()
         
-        composition_onehot = np.zeros(len(119))
+        composition_onehot = np.zeros(119)
         composition_onehot[composition] = 1
         
         
@@ -161,6 +161,9 @@ if __name__ == "__main__":
         pdf, composition = batch
         pdf = pdf.to(device)
         composition = composition.to(device)
+        
+        print(pdf.size())
+        print(composition.size())
         
         with torch.no_grad():
             cell_parameters, cell_positions, cell_atoms, prior_mean, prior_log_std, z_sample = model.predict(
