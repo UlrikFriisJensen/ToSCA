@@ -15,3 +15,5 @@ echo $CUDA_VISIBLE_DEVICES
 python train.py --setup_json test_setup.json
 
 python test.py --test_data validation --setup_json ./models/Combined_data_harsher_normalization/setup_json.json
+
+# python test_experimentalData.py --data_folder ./data/Experimental/Jens/ --setup_json ./models/Combined_data_run_3d/setup_json.json

@@ -278,7 +278,7 @@ if __name__ == "__main__":
                 # Normalize so highest peak in each sample is 1
                 # batch_scattering -= torch.amin(batch_scattering, dim=1, keepdim=True)[0]
                 batch_scattering /= torch.amax(batch_scattering, dim=1, keepdim=True)[0]
-
+                
             # Normalize cell parameters
             cell_parameters_true = batch.y['cell_params'].view(-1, 6)
             if setup_json['data']['normalize_cell_parameters']:
