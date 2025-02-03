@@ -207,7 +207,7 @@ if __name__ == "__main__":
     # Inference
     model.eval()
     for batch in tqdm(exp_loader, desc='Inference', disable=setup_json['disable_tqdm']):
-        this_batch_size = len(batch)
+        this_batch_size = len(batch[0])
         pdf, composition, composition_string_index, filepath_index = batch
         pdf = pdf.unsqueeze(-1).to(device)
         composition = composition.float().to(device)
