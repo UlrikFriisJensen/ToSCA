@@ -172,6 +172,13 @@ if __name__ == "__main__":
                 composition=composition,
             )
         
+        # Denormalize cell parameters
+        if setup_json['data']['normalize_cell_parameters']:
+            cell_parameters = (cell_parameters * cell_stds) + cell_means
+        
+        # Rounding positions to 5 decimals
+        cell_positions = torch.round(cell_positions, decimals=5)
+        
         # Store latent points
         results['latent_point'].extend(interp_point.cpu().tolist())
         
@@ -179,13 +186,6 @@ if __name__ == "__main__":
         results['cell_parameters'].extend(cell_parameters.cpu().tolist())
         results['cell_positions'].extend(cell_positions.cpu().tolist())
         results['cell_atoms'].extend(torch.argmax(cell_atoms, dim=2).cpu().tolist())
-        
-        # Denormalize cell parameters
-        if setup_json['data']['normalize_cell_parameters']:
-            cell_parameters = (cell_parameters * cell_stds) + cell_means
-        
-        # Rounding positions to 5 decimals
-        cell_positions = torch.round(cell_positions, decimals=5)
         
         # Create CIF files
         for batch_index in range(this_batch_size):
