@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_harsher_normalization_32d",
+    "experiment_name" : "Combined_data_harsher_normalization_32d_long",
     "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -80,7 +80,7 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 50,
+        "patience" : 150,
         "beta" : 0.5,
         "simplified_atom_identities" : true,
         "ligands" : [8]
