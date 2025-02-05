@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=Combined_data_harsher_normalization_biggerEncoder
+#SBATCH --job-name=Combined_data_harsher_normalization_32d
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
@@ -14,7 +14,7 @@ echo $CUDA_VISIBLE_DEVICES
 
 python train.py --setup_json test_setup.json
 
-python test.py --test_data validation --setup_json ./models/Combined_data_harsher_normalization_biggerEncoder/setup_json.json
+python test.py --test_data validation --setup_json ./models/Combined_data_harsher_normalization_32d/setup_json.json
 
 # python test_experimentalData.py --data_folder ./data/Experimental/Jens/ --setup_json ./models/Combined_data_run_3d/setup_json.json
 # python test_interpolation.py --setup_json ./models/Combined_data_run_3d/setup_json.json
