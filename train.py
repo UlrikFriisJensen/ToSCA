@@ -248,14 +248,38 @@ if __name__ == "__main__":
     patience = setup_json['training']['patience']
     patience_counter = 0
     best_epoch = 0
+    pretraining = setup_json['training']['seperate_decoder']
+    seperate_decoder = setup_json['training']['seperate_decoder']
+    
     for epoch in range(setup_json['training']['epochs']):
         # Check patience
         if patience_counter >= patience:
-            print(f'Early stopping after {epoch - 1} epochs')
-            break
+            if seperate_decoder and pretraining:
+                pretraining = False
+                patience_counter = 0
+                best_loss = np.inf
+                print('Pretraining done, starting training of main decoder')
+            else:
+                print(f'Early stopping after {epoch - 1} epochs')
+                break
+        
         # Train model
         model.train()
-
+        
+        if seperate_decoder and not pretraining:
+            # Freeze parameters of the encoder and the prior
+            # Encoder
+            model.scattering_encoder.requires_grad_(False)
+            model.graph_encoder_local.requires_grad_(False)
+            model.graph_encoder_mlp.requires_grad_(False)
+            model.composition_encoder.requires_grad_(False)
+            model.linear_encoder.requires_grad_(False)
+            
+            # Prior
+            model.prior_composition_encoder.requires_grad_(False)
+            model.prior_scattering_encoder.requires_grad_(False)
+            model.prior_linear_encoder.requires_grad_(False)
+        
         # Setup for logging loss
         train_loss = 0
         train_loss_rec = 0
@@ -266,6 +290,7 @@ if __name__ == "__main__":
 
         # Training loop
         for batch in tqdm(train_loader, desc='Training', leave=False, disable=setup_json['disable_tqdm']):
+            
             # Put batch on device
             batch = batch.to(device)
             this_batch_size = batch.batch.amax().item() + 1
@@ -318,14 +343,36 @@ if __name__ == "__main__":
                 composition = composition,
                 edge_attr = batch_distances, 
                 batch = batch.batch,
+                pretraining=pretraining,
             )
             
             if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
             elif setup_json['data']['graph_type'] == 'combi':
-                cell_positions_true = batch.pos_frac_target
-                cell_atoms_true = batch.x_target[:,0]
+                if pretraining:
+                    cell_positions_true = batch.pos_frac
+                    cell_atoms_true = batch.x[:,0]
+                    
+                    batch_indices = batch.batch
+                    
+                    target_size = out_dim * this_batch_size
+
+                    if cell_atoms_true.size(0) < target_size:
+                        cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
+                        cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                        for i in range(this_batch_size):
+                            batch_index_mask = batch_indices == i
+                            cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
+                            cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                            
+                        cell_positions_true = cell_positions_true_padded
+                        cell_atoms_true = cell_atoms_true_padded
+                    elif cell_atoms_true.size(0) > target_size:
+                        raise ValueError('Number of atoms in central target graph is larger than expected')   
+                else:
+                    cell_positions_true = batch.pos_frac_target
+                    cell_atoms_true = batch.x_target[:,0]
             elif setup_json['data']['graph_type'] == 'central-target':
                 cell_positions_true = batch.pos_frac
                 cell_atoms_true = batch.x[:,0]
@@ -436,153 +483,177 @@ if __name__ == "__main__":
         validation_loss_kld = 0
 
         # Validation loop
-        for batch in tqdm(validation_loader, desc='Validation', leave=False, disable=setup_json['disable_tqdm']):
-            # Put batch on device
-            batch = batch.to(device)
-            this_batch_size = batch.batch.amax().item() + 1
-            
-            # Normalize scattering
-            batch_scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1)
-            if setup_json['data']['normalize_scattering']:
-                # Normalize so highest peak in each sample is 1
-                # batch_scattering -= torch.amin(batch_scattering, dim=1, keepdim=True)[0]
-                batch_scattering /= torch.amax(batch_scattering, dim=1, keepdim=True)[0]
-            
-            # Normalize cell parameters
-            cell_parameters_true = batch.y['cell_params'].view(-1, 6)
-            if setup_json['data']['normalize_cell_parameters']:
-                cell_parameters_true = (cell_parameters_true - cell_means) / cell_stds
-            cell_parameters_true = cell_parameters_true.float()
-            
-            # Normalize atom positions
-            batch_positions = batch.pos_abs
-            if setup_json['data']['normalize_atom_positions']:
-                batch_positions = (batch_positions - atom_position_means) / atom_position_stds
-            batch_positions = batch_positions.float()
+        with torch.no_grad():
+            for batch in tqdm(validation_loader, desc='Validation', leave=False, disable=setup_json['disable_tqdm']):
+                # Put batch on device
+                batch = batch.to(device)
+                this_batch_size = batch.batch.amax().item() + 1
+                
+                # Normalize scattering
+                batch_scattering = batch.y['xPDF'][:,1,:].unsqueeze(-1)
+                if setup_json['data']['normalize_scattering']:
+                    # Normalize so highest peak in each sample is 1
+                    # batch_scattering -= torch.amin(batch_scattering, dim=1, keepdim=True)[0]
+                    batch_scattering /= torch.amax(batch_scattering, dim=1, keepdim=True)[0]
+                
+                # Normalize cell parameters
+                cell_parameters_true = batch.y['cell_params'].view(-1, 6)
+                if setup_json['data']['normalize_cell_parameters']:
+                    cell_parameters_true = (cell_parameters_true - cell_means) / cell_stds
+                cell_parameters_true = cell_parameters_true.float()
+                
+                # Normalize atom positions
+                batch_positions = batch.pos_abs
+                if setup_json['data']['normalize_atom_positions']:
+                    batch_positions = (batch_positions - atom_position_means) / atom_position_stds
+                batch_positions = batch_positions.float()
 
-            # Normalize distances
-            batch_distances = batch.edge_attr
-            if setup_json['data']['normalize_distances']:
-                batch_distances = (batch_distances - distance_means) / distance_stds
-            batch_distances = batch_distances.float()
-            
-            # Node features
-            batch_features = torch.cat((batch.x, batch_positions), dim=1)
-            
-            # Composition conditioning
-            composition = torch.zeros(this_batch_size, 119).to(device)
-            elements_in_batch = batch.y['atomic_species'].long()
-            index_counter = 0
-            for i in range(this_batch_size):
-                n_elements = batch.y['n_atomic_species'][i]
-                composition[i, elements_in_batch[index_counter:index_counter + n_elements]] = 1
-                index_counter += n_elements
-            composition[:, 0] = 1 
+                # Normalize distances
+                batch_distances = batch.edge_attr
+                if setup_json['data']['normalize_distances']:
+                    batch_distances = (batch_distances - distance_means) / distance_stds
+                batch_distances = batch_distances.float()
+                
+                # Node features
+                batch_features = torch.cat((batch.x, batch_positions), dim=1)
+                
+                # Composition conditioning
+                composition = torch.zeros(this_batch_size, 119).to(device)
+                elements_in_batch = batch.y['atomic_species'].long()
+                index_counter = 0
+                for i in range(this_batch_size):
+                    n_elements = batch.y['n_atomic_species'][i]
+                    composition[i, elements_in_batch[index_counter:index_counter + n_elements]] = 1
+                    index_counter += n_elements
+                composition[:, 0] = 1 
 
-            # Forward pass
-            cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
-                x = batch_features, 
-                edge_index = batch.edge_index, 
-                scattering = batch_scattering,
-                composition = composition,
-                edge_attr = batch_distances, 
-                batch = batch.batch,
-            )
-            
-            if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
-                cell_positions_true = batch.pos_frac
-                cell_atoms_true = batch.x[:,0]
-            elif setup_json['data']['graph_type'] == 'combi':
-                cell_positions_true = batch.pos_frac_target
-                cell_atoms_true = batch.x_target[:,0]
-            elif setup_json['data']['graph_type'] == 'central-target':
-                cell_positions_true = batch.pos_frac
-                cell_atoms_true = batch.x[:,0]
+                # Forward pass
+                cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample = model.forward(
+                    x = batch_features, 
+                    edge_index = batch.edge_index, 
+                    scattering = batch_scattering,
+                    composition = composition,
+                    edge_attr = batch_distances, 
+                    batch = batch.batch,
+                    pretraining=pretraining,
+                )
                 
-                batch_indices = batch.batch
-                
-                target_size = out_dim * this_batch_size
-                
-                if cell_atoms_true.size(0) < target_size:
-                    cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
-                    cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
-                    
-                    for i in range(this_batch_size):
-                        batch_index_mask = batch_indices == i
-                        cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
-                        cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
+                    cell_positions_true = batch.pos_frac
+                    cell_atoms_true = batch.x[:,0]
+                elif setup_json['data']['graph_type'] == 'combi':
+                    if pretraining:
+                        cell_positions_true = batch.pos_frac
+                        cell_atoms_true = batch.x[:,0]
                         
-                    cell_positions_true = cell_positions_true_padded
-                    cell_atoms_true = cell_atoms_true_padded
-                elif cell_atoms_true.size(0) > target_size:
-                    raise ValueError('Number of atoms in central target graph is larger than expected')
-            else:
-                # Assign batch labels to unit cell positions
-                unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
-                index_sum = 0
-                for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
-                    unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
-                    index_sum += unit_cell_atoms
+                        batch_indices = batch.batch
+                        
+                        target_size = out_dim * this_batch_size
+                        
+                        if cell_atoms_true.size(0) < target_size:
+                            cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
+                            cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                            
+                            for i in range(this_batch_size):
+                                batch_index_mask = batch_indices == i
+                                cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
+                                cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                                
+                            cell_positions_true = cell_positions_true_padded
+                            cell_atoms_true = cell_atoms_true_padded
+                        elif cell_atoms_true.size(0) > target_size:
+                            raise ValueError('Number of atoms in central target graph is larger than expected')
+                    else:
+                        cell_positions_true = batch.pos_frac_target
+                        cell_atoms_true = batch.x_target[:,0]
+                elif setup_json['data']['graph_type'] == 'central-target':
+                    cell_positions_true = batch.pos_frac
+                    cell_atoms_true = batch.x[:,0]
                     
-                cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
-                cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                    batch_indices = batch.batch
+                    
+                    target_size = out_dim * this_batch_size
+                    
+                    if cell_atoms_true.size(0) < target_size:
+                        cell_positions_true_padded = torch.zeros_like(cell_positions).to(device) - 1
+                        cell_atoms_true_padded = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                        
+                        for i in range(this_batch_size):
+                            batch_index_mask = batch_indices == i
+                            cell_positions_true_padded[i, :sum(batch_index_mask)] = cell_positions_true[batch_index_mask]
+                            cell_atoms_true_padded[i, :sum(batch_index_mask)] = cell_atoms_true[batch_index_mask]
+                            
+                        cell_positions_true = cell_positions_true_padded
+                        cell_atoms_true = cell_atoms_true_padded
+                    elif cell_atoms_true.size(0) > target_size:
+                        raise ValueError('Number of atoms in central target graph is larger than expected')
+                else:
+                    # Assign batch labels to unit cell positions
+                    unit_cell_batch = torch.zeros(batch.y['unit_cell_pos_frac'].shape[0], dtype=torch.long)
+                    index_sum = 0
+                    for i, unit_cell_atoms in enumerate(batch.y['unit_cell_n_atoms']):
+                        unit_cell_batch[index_sum:index_sum + unit_cell_atoms] = i
+                        index_sum += unit_cell_atoms
+                        
+                    cell_positions_true = torch.zeros_like(cell_positions).to(device) - 1
+                    cell_atoms_true = torch.zeros(cell_atoms.size(0), cell_atoms.size(1)).to(device)
+                    
+                    for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
+                        cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]               
+                        cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
                 
-                for batch_index, unit_cell_size in enumerate(batch.y['unit_cell_n_atoms']):
-                    cell_positions_true[batch_index, :unit_cell_size] = batch.y['unit_cell_pos_frac'][unit_cell_batch == batch_index]               
-                    cell_atoms_true[batch_index, :unit_cell_size] = batch.y['unit_cell_x'][unit_cell_batch == batch_index, 0]
-            
-            # Free up memory related to batch
-            del batch, batch_scattering, batch_positions, batch_distances, batch_features
-            
-            # Reshape atom predictions
-            cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
-            cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
-            
-            cell_atoms = cell_atoms.reshape(-1, setup_json['model']['atom_output_dim'])
-            cell_atoms_true = cell_atoms_true.reshape(-1).long()
-            
-            # Make loss weights
-            cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
-            cell_atoms_weights = torch.where(cell_atoms_true != 0, 1, 0.1).float().to(device)
-            
-            # Simplify atom identities
-            if setup_json['training']['simplified_atom_identities']:
-                # Map atom number 0 to logit 0 (No atom)
-                cell_atoms_true = torch.where(cell_atoms_true == 0, 0, cell_atoms_true)
-                # Map atom numbers of ligands to logit 1 (Ligand)
-                for ligand in setup_json['training']['ligands']:
-                    cell_atoms_true = torch.where(cell_atoms_true == ligand, 1, cell_atoms_true)
-                # Map all other atom numbers to logit 2 (Metal)
-                cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
-            
-            # Rounding positions to 5 decimals
-            cell_positions = torch.round(cell_positions, decimals=5)
-            
-            # Loss
-            loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
-            
-            # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
-            loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
-            
-            # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
-            loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
-            
-            loss_kld = kld.mean()
-            
-            loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
-            loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
-            
-            reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
-            
-            total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
-            
-            # Store loss
-            validation_loss += total_loss.item()
-            validation_loss_rec += reconstruction_loss.item()
-            validation_loss_cell_parameters += loss_cell_parameters.item()
-            validation_loss_cell_positions += loss_cell_positions.item()
-            validation_loss_cell_atoms += loss_cell_atoms.item()
-            validation_loss_kld += loss_kld.item()
+                # Free up memory related to batch
+                del batch, batch_scattering, batch_positions, batch_distances, batch_features
+                
+                # Reshape atom predictions
+                cell_positions = cell_positions.reshape(this_batch_size, out_dim, -1)
+                cell_positions_true = cell_positions_true.reshape(this_batch_size, out_dim, -1)
+                
+                cell_atoms = cell_atoms.reshape(-1, setup_json['model']['atom_output_dim'])
+                cell_atoms_true = cell_atoms_true.reshape(-1).long()
+                
+                # Make loss weights
+                cell_positions_weights = torch.where(cell_positions_true != -1, 1, 0).float().to(device)
+                cell_atoms_weights = torch.where(cell_atoms_true != 0, 1, 0.1).float().to(device)
+                
+                # Simplify atom identities
+                if setup_json['training']['simplified_atom_identities']:
+                    # Map atom number 0 to logit 0 (No atom)
+                    cell_atoms_true = torch.where(cell_atoms_true == 0, 0, cell_atoms_true)
+                    # Map atom numbers of ligands to logit 1 (Ligand)
+                    for ligand in setup_json['training']['ligands']:
+                        cell_atoms_true = torch.where(cell_atoms_true == ligand, 1, cell_atoms_true)
+                    # Map all other atom numbers to logit 2 (Metal)
+                    cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
+                
+                # Rounding positions to 5 decimals
+                cell_positions = torch.round(cell_positions, decimals=5)
+                
+                # Loss
+                loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
+                
+                # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
+                loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
+                
+                # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
+                loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
+                
+                loss_kld = kld.mean()
+                
+                loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+                loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+                
+                reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
+                
+                total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
+                
+                # Store loss
+                validation_loss += total_loss.item()
+                validation_loss_rec += reconstruction_loss.item()
+                validation_loss_cell_parameters += loss_cell_parameters.item()
+                validation_loss_cell_positions += loss_cell_positions.item()
+                validation_loss_cell_atoms += loss_cell_atoms.item()
+                validation_loss_kld += loss_kld.item()
 
         # Calculate average loss
         validation_loss /= len(validation_loader)
@@ -606,7 +677,8 @@ if __name__ == "__main__":
         
         # Save loss in log file
         with open(f'{experiment_folder}/training_log.csv', 'a') as f:
-            f.write(f'{epoch},{train_loss},{train_loss_rec},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_rec},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld},Training\n')
+            stage = 'Pretraining' if pretraining else 'Training'
+            f.write(f'{epoch},{train_loss},{train_loss_rec},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_rec},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld},{stage}\n')
 
 
         # Print progress

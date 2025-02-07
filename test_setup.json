@@ -83,6 +83,7 @@
         "patience" : 50,
         "beta" : 1,
         "simplified_atom_identities" : true,
-        "ligands" : [8]
+        "ligands" : [8],
+        "seperate_decoder" : true
     }
 }

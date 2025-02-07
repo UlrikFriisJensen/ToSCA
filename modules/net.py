@@ -54,7 +54,8 @@ class SCVAE(nn.Module):
         decoder_hidden_dim=2048, 
         position_output_dim=3, 
         atom_output_dim=119, 
-        cell_output_dim=6
+        cell_output_dim=6,
+        seperate_decoder=False,
     ):
         super(SCVAE, self).__init__()
         self.latent_dim = latent_dim
@@ -73,6 +74,7 @@ class SCVAE(nn.Module):
         self.position_output_dim = position_output_dim
         self.atom_output_dim = atom_output_dim
         self.cell_output_dim = cell_output_dim
+        self.seperate_decoder = seperate_decoder
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.aggr_list = ['sum'] #['mean', 'max', 'sum', 'std', 'var']
         
@@ -220,9 +222,40 @@ class SCVAE(nn.Module):
             # nn.ELU(),
             nn.Linear(self.decoder_hidden_dim, self.out_dim*self.atom_output_dim),
         )
+        if self.seperate_decoder:
+            self.shared_decoder_pre = Sequential(
+                nn.Linear(self.latent_dim, self.decoder_hidden_dim//8),
+                # nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
+                nn.ELU(),
+                nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+                nn.ELU(),
+                nn.Linear(self.decoder_hidden_dim//4, self.decoder_hidden_dim//2),
+                nn.ELU(),
+                nn.Linear(self.decoder_hidden_dim //2, self.decoder_hidden_dim),
+                nn.ELU(),
+            )
+            self.cell_parameter_decoder_pre = Sequential(
+                # nn.Linear(self.latent_dim // 2, self.decoder_hidden_dim//8),
+                # nn.ELU(),
+                # nn.Linear(self.decoder_hidden_dim//8, self.decoder_hidden_dim//4),
+                # nn.ELU(),
+                # nn.Linear(self.decoder_hidden_dim//4, self.cell_output_dim),
+
+                nn.Linear(self.decoder_hidden_dim, self.cell_output_dim),
+            )
+            self.cell_position_decoder_pre = Sequential(
+                # nn.Linear(self.decoder_hidden_dim + self.cell_output_dim + self.out_dim*self.atom_output_dim, self.decoder_hidden_dim),
+                # nn.ELU(),
+                nn.Linear(self.decoder_hidden_dim, self.out_dim*self.position_output_dim),
+            )
+            self.cell_atom_decoder_pre = Sequential(
+                # nn.Linear(self.decoder_hidden_dim + self.cell_output_dim, self.decoder_hidden_dim),
+                # nn.ELU(),
+                nn.Linear(self.decoder_hidden_dim, self.out_dim*self.atom_output_dim),
+            )
         
 
-    def encode(self, x, edge_index, edge_attr, batch, scattering, composition):
+    def encode(self, x, edge_index, edge_attr, batch, scattering, composition, pretraining=False):
         
         z_local = self.graph_encoder_local(x, edge_index, edge_attr)
         # z_global = self.graph_encoder_global(z_local, edge_index, edge_attr)
@@ -257,7 +290,7 @@ class SCVAE(nn.Module):
         
         return post_mean, post_log_std
     
-    def prior(self, scattering, composition):
+    def prior(self, scattering, composition, pretraining=False):
         z_scattering = self.prior_scattering_encoder(scattering)
         z_scattering = z_scattering.squeeze(-1)
 
@@ -281,36 +314,56 @@ class SCVAE(nn.Module):
         eps = torch.randn_like(std)
         return mean + eps * std
         
-    def decode(self, z, composition):
+    def decode(self, z, composition, pretraining=False):
         
-        # latent_split = self.latent_dim // 2
-        
-        # z_shared = z.clone()
-        z_shared = self.shared_decoder(z) # z_shared[:, :latent_split]
+        if pretraining:
+            # latent_split = self.latent_dim // 2
+            
+            # z_shared = z.clone()
+            z_shared = self.shared_decoder_pre(z) # z_shared[:, :latent_split]
 
-        cell_parameters = self.cell_parameter_decoder(z_shared.clone()) # z[:, latent_split:]
-        # z_shared = torch.cat((z_shared, cell_parameters.clone()), dim=1)
-        cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
+            cell_parameters = self.cell_parameter_decoder_pre(z_shared.clone()) # z[:, latent_split:]
+            # z_shared = torch.cat((z_shared, cell_parameters.clone()), dim=1)
+            cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
 
-        cell_atoms = self.cell_atom_decoder(z_shared.clone())
-        # z_shared = torch.cat((z_shared, cell_atoms.clone()), dim=1)
-        cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
+            cell_atoms = self.cell_atom_decoder_pre(z_shared.clone())
+            # z_shared = torch.cat((z_shared, cell_atoms.clone()), dim=1)
+            cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
 
-        if self.atom_output_dim == 119:
-            cell_atoms = cell_atoms + composition.unsqueeze(1)
+            if self.atom_output_dim == 119:
+                cell_atoms = cell_atoms + composition.unsqueeze(1)
 
-        cell_positions = self.cell_position_decoder(z_shared.clone())
-        cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
+            cell_positions = self.cell_position_decoder_pre(z_shared.clone())
+            cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
+        else:
+            # latent_split = self.latent_dim // 2
+            
+            # z_shared = z.clone()
+            z_shared = self.shared_decoder(z) # z_shared[:, :latent_split]
+
+            cell_parameters = self.cell_parameter_decoder(z_shared.clone()) # z[:, latent_split:]
+            # z_shared = torch.cat((z_shared, cell_parameters.clone()), dim=1)
+            cell_parameters = cell_parameters.view(-1, self.cell_output_dim)
+
+            cell_atoms = self.cell_atom_decoder(z_shared.clone())
+            # z_shared = torch.cat((z_shared, cell_atoms.clone()), dim=1)
+            cell_atoms = cell_atoms.view(-1, self.out_dim, self.atom_output_dim)
+
+            if self.atom_output_dim == 119:
+                cell_atoms = cell_atoms + composition.unsqueeze(1)
+
+            cell_positions = self.cell_position_decoder(z_shared.clone())
+            cell_positions = cell_positions.view(-1, self.out_dim, self.position_output_dim)
         
         
         return cell_parameters, cell_positions, cell_atoms
 
-    def forward(self, x, edge_index, scattering, composition, edge_attr=None, batch=None):
+    def forward(self, x, edge_index, scattering, composition, edge_attr=None, batch=None, pretraining=False):
         # Posterior encoder
-        post_mean, post_log_std = self.encode(x, edge_index, edge_attr, batch, scattering, composition)
+        post_mean, post_log_std = self.encode(x, edge_index, edge_attr, batch, scattering, composition, pretraining)
         
         # Prior encoder
-        prior_mean, prior_log_std = self.prior(scattering, composition)
+        prior_mean, prior_log_std = self.prior(scattering, composition, pretraining)
         
         # Ensure no zero variance
         offset = 1e-15
@@ -328,7 +381,7 @@ class SCVAE(nn.Module):
         z_sample = posterior_dist.rsample()
         
         # Decoder        
-        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample, composition)
+        cell_parameters, cell_positions, cell_atoms = self.decode(z_sample, composition, pretraining)
         
         return cell_parameters, cell_positions, cell_atoms, kld, post_mean, post_log_std, prior_mean, prior_log_std, z_sample
     
