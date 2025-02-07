@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_harsher_normalization_64d",
+    "experiment_name" : "Combined_data_harsher_normalization_3d",
     "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -60,7 +60,7 @@
         }
     },
     "model" : {
-        "latent_dim" : 64,
+        "latent_dim" : 3,
         "out_dim" : null,
         "prior_factor" : 4,
         "gnn_dim" : 256,
@@ -81,7 +81,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 0.5,
+        "beta" : 1,
         "simplified_atom_identities" : true,
         "ligands" : [8]
     }
