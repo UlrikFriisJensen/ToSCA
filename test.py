@@ -123,6 +123,7 @@ if __name__ == "__main__":
         position_output_dim=setup_json['model']['position_output_dim'],
         atom_output_dim=setup_json['model']['atom_output_dim'],
         cell_output_dim=setup_json['model']['cell_output_dim'],
+        seperate_decoder=setup_json['training']['seperate_decoder'],
     ).to(device)
     
     # Load model weights
