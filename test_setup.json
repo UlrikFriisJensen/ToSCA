@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Combined_data_pretrained_test",
-    "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior. Testing out pretraining the encoder.",
+    "experiment_name" : "Combined_data_pretrained_3d",
+    "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior. With pretraining the encoder.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -63,11 +63,11 @@
         "latent_dim" : 3,
         "out_dim" : null,
         "prior_factor" : 4,
-        "gnn_dim" : 256,
+        "gnn_dim" : 512,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 256,
+        "scattering_dim" : 512,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
@@ -80,8 +80,8 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 5,
-        "beta" : 0.5,
+        "patience" : 50,
+        "beta" : 1.0,
         "simplified_atom_identities" : true,
         "ligands" : [8],
         "seperate_decoder" : true
