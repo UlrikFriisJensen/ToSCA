@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_pretrained_3d_allAtoms",
+    "experiment_name" : "Combined_data_pretrained_32d",
     "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior. With pretraining the encoder.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -64,17 +64,17 @@
         "out_dim" : null,
         "prior_factor" : 2,
         "gnn_dim" : 512,
-        "gnn_heads" : 2,
+        "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 1024,
+        "scattering_dim" : 512,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
         "composition_dim" : 256,
         "decoder_hidden_dim" : 2048,
         "position_output_dim" : 3,
-        "atom_output_dim" : 119,
+        "atom_output_dim" : 3,
         "cell_output_dim" : 6
     },
     "training" : {
@@ -82,7 +82,7 @@
         "learning_rate" : 1e-5,
         "patience" : 50,
         "beta" : 1.0,
-        "simplified_atom_identities" : false,
+        "simplified_atom_identities" : true,
         "ligands" : [8],
         "seperate_decoder" : true
     }
