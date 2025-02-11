@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Combined_data_pretrained_32d",
-    "experiment_description" : "Run with combined super cell and central graph. Trying to enforce better correlation between prior and posterior. With pretraining the encoder.",
+    "experiment_name" : "Combined_data_100K_3d",
+    "experiment_description" : "Run with combined super cell and central graph on the 100K data",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -8,7 +8,7 @@
     "model_root" : "./models/",
     "disable_tqdm" : true,
     "data" : {
-        "name" : "CHILI-3K",
+        "name" : "CHILI-100K",
         "graph_type" : "combi",
         "root" : "./data/",
         "split_strategy" : "stratified",
@@ -63,11 +63,11 @@
         "latent_dim" : 3,
         "out_dim" : null,
         "prior_factor" : 2,
-        "gnn_dim" : 512,
+        "gnn_dim" : 256,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
         "scattering_channels" : 1,
-        "scattering_dim" : 512,
+        "scattering_dim" : 256,
         "scattering_kernel_size" : 1,
         "scattering_stride" : 1,
         "scattering_padding" : 0,
@@ -84,6 +84,6 @@
         "beta" : 1.0,
         "simplified_atom_identities" : true,
         "ligands" : [8],
-        "seperate_decoder" : true
+        "seperate_decoder" : false
     }
 }
