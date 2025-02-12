@@ -215,7 +215,7 @@ if __name__ == "__main__":
 
     # Setup logging file
     with open(f'{experiment_folder}/training_log.csv', 'w') as f:
-        f.write('epoch,train_loss,train_loss_reconstruction,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_reconstruction,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld,stage\n')
+        f.write('epoch,beta,train_loss,train_loss_reconstruction,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_reconstruction,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld,stage\n')
 
     # Load normalization factors
     if setup_json['data']['normalize_cell_parameters']:
@@ -244,7 +244,17 @@ if __name__ == "__main__":
         distance_means = torch.tensor(setup_json['data']['distance_normalization']['mean']).float().to(device)
         distance_stds = torch.tensor(setup_json['data']['distance_normalization']['std']).float().to(device)
 
-    beta = setup_json['training']['beta']
+    if setup_json['training']['beta_annealing']:
+        beta_start = setup_json['training']['beta_start']
+        beta_mid = setup_json['training']['beta_mid']
+        beta_end = setup_json['training']['beta_end']
+        beta_annealing_steps = setup_json['training']['beta_annealing_steps']
+        beta_start_rate = (beta_mid - beta_start) / beta_annealing_steps
+        beta_end_rate = (beta_end - beta_mid) / (beta_annealing_steps*2)
+        beta_warmup = setup_json['training']['beta_warmup']
+        final_annealing = False
+    else:
+        beta = setup_json['training']['beta']
     best_loss = np.inf
     patience = setup_json['training']['patience']
     patience_counter = 0
@@ -255,7 +265,9 @@ if __name__ == "__main__":
     for epoch in range(setup_json['training']['epochs']):
         # Check patience
         if patience_counter >= patience:
-            if seperate_decoder and pretraining:
+            if setup_json['training']['beta_annealing']:
+                final_annealing = True
+            elif seperate_decoder and pretraining:
                 pretraining = False
                 patience_counter = 0
                 best_loss = np.inf
@@ -263,6 +275,17 @@ if __name__ == "__main__":
             else:
                 print(f'Early stopping after {epoch - 1} epochs')
                 break
+        
+        if setup_json['training']['beta_annealing']:
+            if epoch < beta_warmup:
+                beta = beta_start
+            elif beta < beta_mid:
+                beta += beta_start_rate
+            elif final_annealing:
+                if beta < beta_end:
+                    beta += beta_end_rate
+                    patience_counter = 0
+                    best_loss = np.inf
         
         # Train model
         model.train()
@@ -666,10 +689,16 @@ if __name__ == "__main__":
         
         # Check if model improved
         if validation_loss_rec < best_loss:
-            patience_counter = 0
-            best_epoch = epoch
-            best_loss = validation_loss_rec
-            torch.save(model.state_dict(), f'{experiment_folder}/best_model.pth')
+            if final_annealing and beta == beta_end:
+                patience_counter = 0
+                best_epoch = epoch
+                best_loss = validation_loss_rec
+                torch.save(model.state_dict(), f'{experiment_folder}/best_model_annealed.pth')
+            elif not final_annealing:
+                patience_counter = 0
+                best_epoch = epoch
+                best_loss = validation_loss_rec
+                torch.save(model.state_dict(), f'{experiment_folder}/best_model.pth')
         else:
             patience_counter += 1
             
@@ -679,7 +708,7 @@ if __name__ == "__main__":
         # Save loss in log file
         with open(f'{experiment_folder}/training_log.csv', 'a') as f:
             stage = 'Pretraining' if pretraining else 'Training'
-            f.write(f'{epoch},{train_loss},{train_loss_rec},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_rec},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld},{stage}\n')
+            f.write(f'{epoch},{beta},{train_loss},{train_loss_rec},{train_loss_cell_parameters},{train_loss_cell_positions},{train_loss_cell_atoms},{train_loss_kld},{validation_loss},{validation_loss_rec},{validation_loss_cell_parameters},{validation_loss_cell_positions},{validation_loss_cell_atoms},{validation_loss_kld},{stage}\n')
 
 
         # Print progress
