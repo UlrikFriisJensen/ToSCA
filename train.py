@@ -689,7 +689,7 @@ if __name__ == "__main__":
         
         # Check if model improved
         if validation_loss_rec < best_loss:
-            if final_annealing and beta == beta_end:
+            if final_annealing and beta >= beta_end:
                 patience_counter = 0
                 best_epoch = epoch
                 best_loss = validation_loss_rec
