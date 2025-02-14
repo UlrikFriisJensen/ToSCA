@@ -351,11 +351,17 @@ if __name__ == "__main__":
                     ct_loss_cell_parameters = loss_fn_cell_parameters(cell_parameters[batch_index], cell_parameters_true[batch_index])
                     ct_loss_cell_positions = loss_fn_cell_positions(cell_positions[batch_index], cell_positions_true[batch_index], ct_cell_positions_weights)
                     ct_loss_cell_atoms = loss_fn_cell_atoms(cell_atoms[batch_index], ct_cell_atoms_true.long(), ct_cell_atoms_weights)
-                    ct_loss_kld = kld[batch_index].mean()
-                    ct_loss_latent_mean = loss_fn_latent_mean(prior_mean[batch_index], post_mean[batch_index])
-                    ct_loss_latent_std = loss_fn_latent_std(prior_log_std[batch_index], post_log_std[batch_index])
                     ct_loss_rec = ct_loss_cell_parameters + ct_loss_cell_positions + ct_loss_cell_atoms
-                    ct_total_loss = torch.log(ct_loss_rec + ((ct_loss_kld + ct_loss_latent_mean + ct_loss_latent_std) * beta)) #torch.log(ct_loss_rec) + (ct_loss_kld * beta)
+                        
+                    ct_loss_kld = kld[batch_index].mean()
+                    if setup_json['training']['latent_mse']:
+                        ct_loss_latent_mean = loss_fn_latent_mean(prior_mean[batch_index], post_mean[batch_index])
+                        ct_loss_latent_std = loss_fn_latent_std(prior_log_std[batch_index], post_log_std[batch_index])
+                        ct_loss_latent = ct_loss_kld + ct_loss_latent_mean + ct_loss_latent_std
+                    else:
+                        ct_loss_latent = ct_loss_kld
+                        
+                    ct_total_loss = torch.log(ct_loss_rec + ((ct_loss_latent) * beta)) #torch.log(ct_loss_rec) + (ct_loss_kld * beta)
                     
                     # Log the Crystal type dependent losses
                     loss_CrystalType['total'].append(ct_total_loss.item())
@@ -438,7 +444,9 @@ if __name__ == "__main__":
                 # Map all other atom numbers to logit 2 (Metal)
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
-            # Loss
+            # Loss calculations
+
+            # Reconstruction loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
             
             # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
@@ -447,14 +455,18 @@ if __name__ == "__main__":
             # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
             loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
             
-            loss_kld = kld.mean()
-            
-            loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
-            loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
-            
             loss_reconstruction = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
+
+            # Latent loss
+            loss_kld = kld.mean()
+            if setup_json['training']['latent_mse']:
+                loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+                loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+                latent_loss = loss_kld + loss_latent_mean + loss_latent_std
+            else:
+                latent_loss = loss_kld
             
-            total_loss = torch.log(loss_reconstruction + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(loss_reconstruction) + (loss_kld * beta)
+            total_loss = torch.log(loss_reconstruction + ((latent_loss) * beta)) #torch.log(loss_reconstruction) + (loss_kld * beta)
             
             # Store loss
             test_loss += total_loss.item()

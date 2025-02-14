@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_beta_annealing_2d_bigger_encoder_v2",
+    "experiment_name" : "Combined_data_beta_annealing_3d",
     "experiment_description" : "Run with beta annealing to see if it helps the latent space structure.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -60,9 +60,9 @@
         }
     },
     "model" : {
-        "latent_dim" : 2,
+        "latent_dim" : 3,
         "out_dim" : null,
-        "prior_factor" : 2,
+        "prior_factor" : 4,
         "gnn_dim" : 512,
         "gnn_heads" : 1,
         "gnn_edge_dim" : 1,
@@ -88,6 +88,7 @@
         "beta_end" : 10.0,
         "beta_annealing_steps" : 50,
         "beta_warmup" : 1,
+        "latent_mse": false,
         "simplified_atom_identities" : true,
         "ligands" : [8],
         "seperate_decoder" : false

@@ -265,7 +265,7 @@ if __name__ == "__main__":
     for epoch in range(setup_json['training']['epochs']):
         # Check patience
         if patience_counter >= patience:
-            if setup_json['training']['beta_annealing']:
+            if setup_json['training']['beta_annealing'] and not final_annealing:
                 final_annealing = True
             elif seperate_decoder and pretraining:
                 pretraining = False
@@ -456,23 +456,29 @@ if __name__ == "__main__":
                 # Map all other atom numbers to logit 2 (Metal)
                 cell_atoms_true = torch.where(cell_atoms_true >= 2, 2, cell_atoms_true)
             
-            # Loss calculation
+            # Loss calculations
+
+            # Reconstruction loss
             loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
-            
+
             # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
             loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true, cell_positions_weights) # Weighted
-            
+
             # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
             loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
             
-            loss_kld = kld.mean()
-            
-            loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
-            loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
-            
             reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
+
+            # Latent loss
+            loss_kld = kld.mean()
+            if setup_json['training']['latent_mse']:
+                loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+                loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+                latent_loss = loss_kld + loss_latent_mean + loss_latent_std
+            else:
+                latent_loss = loss_kld
             
-            total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
+            total_loss = torch.log(reconstruction_loss + ((latent_loss) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
             
             # Backward pass
             total_loss.backward()
@@ -653,7 +659,9 @@ if __name__ == "__main__":
                 # Rounding positions to 5 decimals
                 cell_positions = torch.round(cell_positions, decimals=5)
                 
-                # Loss
+                # Loss calculations
+
+                # Reconstruction loss
                 loss_cell_parameters = loss_fn_cell_parameters(cell_parameters, cell_parameters_true) 
                 
                 # loss_cell_positions = loss_fn_cell_positions(cell_positions, cell_positions_true) # Unweighted
@@ -662,14 +670,18 @@ if __name__ == "__main__":
                 # loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true) # Unweighted
                 loss_cell_atoms = loss_fn_cell_atoms(cell_atoms, cell_atoms_true, cell_atoms_weights) # Weighted
                 
-                loss_kld = kld.mean()
-                
-                loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
-                loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
-                
                 reconstruction_loss = loss_cell_parameters + loss_cell_positions + loss_cell_atoms
                 
-                total_loss = torch.log(reconstruction_loss + ((loss_kld + loss_latent_mean + loss_latent_std) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
+                # Latent loss
+                loss_kld = kld.mean()
+                if setup_json['training']['latent_mse']:
+                    loss_latent_mean = loss_fn_latent_mean(prior_mean, post_mean)
+                    loss_latent_std = loss_fn_latent_std(prior_log_std, post_log_std)
+                    latent_loss = loss_kld + loss_latent_mean + loss_latent_std
+                else:
+                    latent_loss = loss_kld
+                
+                total_loss = torch.log(reconstruction_loss + ((latent_loss) * beta)) #torch.log(reconstruction_loss) + (loss_kld * beta)
                 
                 # Store loss
                 validation_loss += total_loss.item()
