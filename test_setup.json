@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_beta_annealing_3d",
+    "experiment_name" : "Combined_data_beta_annealing_3d_latentMSE_biggerDecoder",
     "experiment_description" : "Run with beta annealing to see if it helps the latent space structure.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -72,7 +72,7 @@
         "scattering_stride" : 1,
         "scattering_padding" : 0,
         "composition_dim" : 256,
-        "decoder_hidden_dim" : 2048,
+        "decoder_hidden_dim" : 4096,
         "position_output_dim" : 3,
         "atom_output_dim" : 3,
         "cell_output_dim" : 6
@@ -88,7 +88,7 @@
         "beta_end" : 10.0,
         "beta_annealing_steps" : 50,
         "beta_warmup" : 1,
-        "latent_mse": false,
+        "latent_mse": true,
         "simplified_atom_identities" : true,
         "ligands" : [8],
         "seperate_decoder" : false
