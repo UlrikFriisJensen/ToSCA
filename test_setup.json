@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Combined_data_beta_annealing_3d_latentMSE_biggerDecoder",
+    "experiment_name" : "Supercell_beta_annealing_3d_latentMSE_biggerDecoder",
     "experiment_description" : "Run with beta annealing to see if it helps the latent space structure.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -9,7 +9,7 @@
     "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-3K",
-        "graph_type" : "combi",
+        "graph_type" : "super_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
         "stratify_column" : "Crystal type",
