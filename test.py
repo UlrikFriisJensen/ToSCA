@@ -199,7 +199,7 @@ if __name__ == "__main__":
             loss_CrystalType = {'total': [], 'reconstruction_loss': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': [], 'particleSize': []}
             
             # Crystal type dependent reconstructions
-            reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': []}
+            reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': [], "true_cell_parameters": [], "true_cell_positions": [], "true_cell_atoms": []}
             
         with torch.no_grad():
             for batch in tqdm(data_loader, desc='Testing', disable=setup_json['disable_tqdm']):
@@ -390,6 +390,9 @@ if __name__ == "__main__":
                         reconstructions_CrystalType['cell_atoms'].append(cell_atoms_rec.detach().cpu().tolist())
                         reconstructions_CrystalType['latent_space_mean'].append(post_mean[batch_index].detach().cpu().tolist())
                         reconstructions_CrystalType['latent_space_std'].append(post_log_std[batch_index].detach().cpu().tolist())
+                        reconstructions_CrystalType['true_cell_parameters'].append(cell_parameters_true[batch_index].detach().cpu().tolist())
+                        reconstructions_CrystalType['true_cell_positions'].append(cell_positions_true[batch_index].detach().cpu().tolist())
+                        reconstructions_CrystalType['true_cell_atoms'].append(cell_atoms_true[batch_index].detach().cpu().tolist())
                     
                     # Ground truth
                     ground_truth_composition = create_cif(
