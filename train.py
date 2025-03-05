@@ -3,6 +3,7 @@ import argparse
 import json
 import warnings
 import numpy as np
+import pandas as pd
 from modules.CHILI import CHILI
 from modules.net import SCVAE
 from torch_geometric.loader import DataLoader
@@ -512,6 +513,19 @@ if __name__ == "__main__":
         validation_loss_cell_atoms = 0
         validation_loss_kld = 0
 
+        # Logging latent space
+        latent_space_dict = {
+            'epoch': [],
+            'posterior_mean': [],
+            'posterior_std': [],
+            'prior_mean': [],
+            'prior_std': [],
+            'np_size': [],
+            'crystal_type': [],
+            'crystal_system': [],
+            'space_group': [],
+        }
+
         # Validation loop
         with torch.no_grad():
             for batch in tqdm(validation_loader, desc='Validation', leave=False, disable=setup_json['disable_tqdm']):
@@ -568,6 +582,18 @@ if __name__ == "__main__":
                     pretraining=pretraining,
                 )
                 
+                # Store latent space information
+                latent_space_dict['epoch'].extend([epoch] * this_batch_size)
+                latent_space_dict['posterior_mean'].extend(post_mean.tolist())
+                latent_space_dict['posterior_std'].extend(post_log_std.tolist())
+                latent_space_dict['prior_mean'].extend(prior_mean.tolist())
+                latent_space_dict['prior_std'].extend(prior_log_std.tolist())
+                latent_space_dict['np_size'].extend(batch.y['np_size'].tolist())
+                latent_space_dict['crystal_type'].extend(batch.y['crystal_type'].tolist())
+                latent_space_dict['crystal_system'].extend(batch.y['crystal_system'].tolist())
+                latent_space_dict['space_group'].extend(batch.y['space_group_number'].tolist())
+
+                # Get true cell parameters and atom positions
                 if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
                     cell_positions_true = batch.pos_frac
                     cell_atoms_true = batch.x[:,0]
@@ -713,7 +739,11 @@ if __name__ == "__main__":
                 torch.save(model.state_dict(), f'{experiment_folder}/best_model.pth')
         else:
             patience_counter += 1
-            
+        
+        # Save latent space information
+        latent_space_df = pd.DataFrame(latent_space_dict, columns=latent_space_dict.keys())
+        latent_space_df.to_csv(f'{experiment_folder}/latent_space_log.csv', index=False, mode='a')
+
         # Save latest model
         torch.save(model.state_dict(), f'{experiment_folder}/latest_model.pth')
         

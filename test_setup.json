@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Supercell_beta_annealing_3d_latentMSE_biggerDecoder_long",
-    "experiment_description" : "Run with beta annealing to see if it helps the latent space structure.",
+    "experiment_name" : "Supercell_latentLog_beta_annealing_3d_latentMSE_biggerDecoder",
+    "experiment_description" : "Run with beta annealing to see if it helps the latent space structure. Logging latent space during training.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -80,11 +80,11 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 150,
+        "patience" : 75,
         "beta" : 1.0,
         "beta_annealing" : true,
-        "beta_start" : 0.5,
-        "beta_mid" : 0.5,
+        "beta_start" : 0.25,
+        "beta_mid" : 0.25,
         "beta_end" : 25.0,
         "beta_annealing_steps" : 50,
         "beta_warmup" : 1,
