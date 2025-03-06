@@ -589,8 +589,8 @@ if __name__ == "__main__":
                 latent_space_dict['prior_mean'].extend(prior_mean.tolist())
                 latent_space_dict['prior_std'].extend(prior_log_std.tolist())
                 latent_space_dict['np_size'].extend(batch.y['np_size'].tolist())
-                latent_space_dict['crystal_type'].extend(batch.y['crystal_type'].tolist())
-                latent_space_dict['crystal_system'].extend(batch.y['crystal_system'].tolist())
+                latent_space_dict['crystal_type'].extend(batch.y['crystal_type'])
+                latent_space_dict['crystal_system'].extend(batch.y['crystal_system'])
                 latent_space_dict['space_group'].extend(batch.y['space_group_number'].tolist())
 
                 # Get true cell parameters and atom positions
