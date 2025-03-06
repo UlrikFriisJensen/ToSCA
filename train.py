@@ -591,7 +591,7 @@ if __name__ == "__main__":
                 latent_space_dict['np_size'].extend(batch.y['np_size'].tolist())
                 latent_space_dict['crystal_type'].extend(batch.y['crystal_type'])
                 latent_space_dict['crystal_system'].extend(batch.y['crystal_system'])
-                latent_space_dict['space_group'].extend(batch.y['space_group_number'].tolist())
+                latent_space_dict['space_group'].extend(batch.y['space_group_number'])
 
                 # Get true cell parameters and atom positions
                 if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
