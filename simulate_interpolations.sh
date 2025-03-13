@@ -1,0 +1,15 @@
+#!/bin/bash
+#SBATCH --job-name=Simulate_interpolations
+
+#SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
+
+#SBATCH --time=0-01:00:00
+
+#SBATCH -o ./slurm_outputs/sim-%j.out #STDOUT
+
+hostname
+
+python ./modules/generate_cifs.py --dataset ./data/
+
+python ./modules/generate_interpolation_cifs.py --cif_folder ./data/CIFs/CHILI-3K/ --output_folder ./data/CIFs/Interpolations/
+
