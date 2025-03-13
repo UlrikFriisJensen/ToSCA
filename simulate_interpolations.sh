@@ -13,3 +13,4 @@ python ./modules/generate_cifs.py --dataset ./data/
 
 python ./modules/generate_interpolation_cifs.py --cif_folder ./data/CIFs/CHILI-3K/ --output_folder ./data/CIFs/Interpolations/
 
+python ./modules/cif_batching.py --dataset ./data/CIFs/Interpolations/ --batch_size 1000
