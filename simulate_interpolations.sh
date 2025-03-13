@@ -3,7 +3,7 @@
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=8000M
 
-#SBATCH --time=0-01:00:00
+#SBATCH --time=0-02:00:00
 
 #SBATCH -o ./slurm_outputs/sim-%j.out #STDOUT
 
@@ -13,4 +13,4 @@ python ./modules/generate_cifs.py --dataset ./data/
 
 python ./modules/generate_interpolation_cifs.py --cif_folder ./data/CIFs/CHILI-3K/ --output_folder ./data/CIFs/Interpolations/
 
-python ./modules/cif_batching.py --dataset ./data/CIFs/Interpolations/ --batch_size 1000
+python ./modules/cif_batching.py --dataset ./data/CIFs/Interpolations/ --batch_size 10
