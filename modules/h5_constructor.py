@@ -13,6 +13,7 @@ import torch
 from ase.io import read
 from ase.spacegroup import get_spacegroup
 from debyecalculator import DebyeCalculator
+from debyecalculator.utility.generate import generate_nanoparticles
 from elements import elements
 from mendeleev import element
 from mendeleev.fetch import fetch_table
@@ -46,7 +47,7 @@ class h5Constructor:
 
         # Create save directory if it doesn't exist
         if not self.save_dir.exists():
-            self.save_dir.mkdir(parents=True)
+            self.save_dir.mkdir(parents=True, exist_ok=True)
             # print("Save directory doesn't exist.\nCreated the save directory at " + str(self.save_dir))
 
         self.save_dir = str(self.save_dir)
@@ -81,6 +82,9 @@ class h5Constructor:
         save_discrete_nps=True,
     ):
         cif, np_radii, device, node_feature_table, metals, metals_elements = input_tuple
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
         cif_name = cif.split("/")[-1].split(".")[0]
         print(cif_name, flush=True)
         # Check if graph has already been made
@@ -161,15 +165,15 @@ class h5Constructor:
             pass
 
         # Check small distances
-        try:
-            unit_cell_distances = unit_cell.get_all_distances()
-            if np.any(
-                np.logical_and(unit_cell_distances < 1.2, unit_cell_distances > 0.0)
-            ):
-                print("\tUnwanted overlapping atoms", cif_name, ".. skipping")
-                return
-        except:
-            pass
+        # try:
+        #     unit_cell_distances = unit_cell.get_all_distances()
+        #     if np.any(
+        #         np.logical_and(unit_cell_distances < 1.2, unit_cell_distances > 0.0)
+        #     ):
+        #         print("\tUnwanted overlapping atoms", cif_name, ".. skipping")
+        #         return
+        # except:
+        #     pass
 
         # Find node features
         node_features = np.array(
@@ -238,32 +242,51 @@ class h5Constructor:
         )
 
         # Construct discrete particles for simulation of spectra
-        (
-            struc_list,
-            size_list,
-            edge_list,
-            dist_list,
-        ) = xray_calculator.generate_nanoparticles(
-            structure_path=cif,
+        np_list = generate_nanoparticles(
+            cif_file=cif,
             radii=np_radii,
-            atomic_size_table=node_feature_table,
+            # atomic_size_table=node_feature_table,
             sort_atoms=False,
             disable_pbar=True,
             metals=metals,
             return_graph_elements=True,
+            device=device,
+            _return_ase=True,
         )
 
-        # Calculate scattering for large Q-range
-        x_r, x_q, x_iq, _, _, x_gr = xray_calculator._get_all(struc_list)
-        n_r, n_q, n_iq, _, _, n_gr = neutron_calculator._get_all(struc_list)
+        # Extract the structures
+        struc_list = [np[0] for np in np_list]
+        size_list = [np[1] for np in np_list]
+        edge_list = [np[2] for np in np_list]
+        dist_list = [np[3] for np in np_list]
+
+        x_iq = []
+        n_iq = []
+        x_gr = []
+        n_gr = []
+        saxs_iq = []
+        sans_iq = []
+        for i in range(len(struc_list)):
+            # Calculate scattering for large Q-range
+            x_r, x_q, _x_iq, _, _, _x_gr = xray_calculator._get_all(struc_list[i])
+            n_r, n_q, _n_iq, _, _, _n_gr = neutron_calculator._get_all(struc_list[i])
+            
+            x_iq.append(_x_iq)
+            n_iq.append(_n_iq)
+            x_gr.append(_x_gr)
+            n_gr.append(_n_gr)
 
         # Simulation parameters for small Q-range
         xray_calculator.update_parameters(qmin=0, qmax=3.0, qstep=0.01)
         neutron_calculator.update_parameters(qmin=0, qmax=3.0, qstep=0.01)
+        
+        for i in range(len(struc_list)):
+            # Calculate SAS
+            saxs_q, _saxs_iq = xray_calculator.iq(struc_list[i])
+            sans_q, _sans_iq = neutron_calculator.iq(struc_list[i])
 
-        # Calculate SAS
-        saxs_q, saxs_iq = xray_calculator.iq(struc_list)
-        sans_q, sans_iq = neutron_calculator.iq(struc_list)
+            saxs_iq.append(_saxs_iq)
+            sans_iq.append(_sans_iq)
 
         # Construct .h5 file
         with h5py.File(f"{self.save_dir}/{cif_name}.h5", "w") as h5_file:
