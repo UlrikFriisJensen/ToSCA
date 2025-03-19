@@ -62,7 +62,7 @@ class CHILI(Dataset):
         self.pre_transform = lambda data: data
         self.pre_filter = lambda data: data
 
-        # Download if data if there are no raw files
+        # Download data if there are no raw files
         if len(self.raw_file_names) == 0:
             # Make raw folder
             if not os.path.exists(os.path.join(self.root, "raw")):
@@ -97,7 +97,8 @@ class CHILI(Dataset):
         """
         Returns the list of raw file names in the dataset.
         """
-        paths = glob(os.path.join(self.raw_dir, "**/*.h5"))
+        paths = glob(os.path.join(self.raw_dir, "*.h5"))
+        paths += glob(os.path.join(self.raw_dir, "**/*.h5"))
         return paths
 
     @property
