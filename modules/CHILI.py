@@ -113,10 +113,16 @@ class CHILI(Dataset):
         Downloads the dataset.
         """
         # Download to `self.raw_dir`.
-        path = download_url(
-            f"https://erda.ku.dk/archives/c9d91863f89c3a7e87201c175ff4b213/Nanostructure_Data/Data_for_MachineLearning/DatasetPaper/{self.dataset}.zip",
-            self.raw_dir,
-        )
+        if self.dataset == "CHILI-Interpolation":
+            path = download_url(
+                'https://sid.erda.dk/share_redirect/gY07tsqdI9',
+                self.raw_dir,
+            )
+        else:
+            path = download_url(
+                f"https://erda.ku.dk/archives/c9d91863f89c3a7e87201c175ff4b213/Nanostructure_Data/Data_for_MachineLearning/DatasetPaper/{self.dataset}.zip",
+                self.raw_dir,
+            )
         # Extract zip and delete zip
         extract_zip(path, self.raw_dir)
         os.remove(path)

@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Supercell_latentLog_beta_annealing_3d_latentMSE_biggerDecoder_v2",
-    "experiment_description" : "Run with beta annealing to see if it helps the latent space structure. Logging latent space during training.",
+    "experiment_name" : "Interpolation_Supercell_latentLog_beta_annealing_2d_latentMSE_biggerDecoder",
+    "experiment_description" : "Run with interpolation data between rocksalt, spinel and zincblende structures.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -8,7 +8,7 @@
     "model_root" : "./models/",
     "disable_tqdm" : true,
     "data" : {
-        "name" : "CHILI-3K",
+        "name" : "CHILI-Interpolation",
         "graph_type" : "super_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
@@ -80,7 +80,7 @@
     "training" : {
         "epochs" : 5000,
         "learning_rate" : 1e-5,
-        "patience" : 75,
+        "patience" : 50,
         "beta" : 1.0,
         "beta_annealing" : true,
         "beta_start" : 0.5,
