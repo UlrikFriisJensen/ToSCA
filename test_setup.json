@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Interpolation_Supercell_latentLog_beta_annealing_2d_latentMSE_smallerEncoder",
+    "experiment_name" : "Interpolation_Supercell_latentLog_2d_latentMSE_smallerEncoder",
     "experiment_description" : "Run with interpolation data between rocksalt, spinel and zincblende structures.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -81,7 +81,7 @@
         "epochs" : 5000,
         "learning_rate" : 1e-5,
         "patience" : 50,
-        "beta" : 1.0,
+        "beta" : 0.5,
         "beta_annealing" : false,
         "beta_start" : 0.5,
         "beta_mid" : 0.5,
