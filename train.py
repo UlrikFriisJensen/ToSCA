@@ -256,6 +256,8 @@ if __name__ == "__main__":
         final_annealing = False
     else:
         beta = setup_json['training']['beta']
+        final_annealing = False
+        
     best_loss = np.inf
     patience = setup_json['training']['patience']
     patience_counter = 0
