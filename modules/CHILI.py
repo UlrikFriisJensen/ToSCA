@@ -30,6 +30,7 @@ class CHILI(Dataset):
         pre_transform: Optional[Callable] = None,
         pre_filter: Optional[Callable] = None,
         graph_type: str = "",
+        distance_doublecheck: bool = True,
     ) -> None:
         """
         Initializes CHILI dataset.
@@ -41,6 +42,7 @@ class CHILI(Dataset):
             pre_transform (callable, optional): A function/transform to apply to the data before saving.
             pre_filter (callable, optional): A function that takes data and returns True if the data point should be included in the dataset.
             graph_type (str, optional): Type of graph. Defaults to "".
+            distance_doublecheck (bool, optional): Whether to doublecheck the distances. Defaults to True.
         """
         # Create dataset folder if it does not exists
         if not os.path.exists(root):
@@ -61,6 +63,8 @@ class CHILI(Dataset):
         self.transform = lambda data: data
         self.pre_transform = lambda data: data
         self.pre_filter = lambda data: data
+        
+        self.distance_doublecheck = distance_doublecheck
 
         # Download data if there are no raw files
         if len(self.raw_file_names) == 0:
@@ -225,7 +229,25 @@ class CHILI(Dataset):
                     # Crystal system
                     crystal_system = h5f["GlobalLabels"]["CrystalSystem"][()].decode()
                     crystal_system_number = self.crystal_system_to_number(crystal_system)
-
+                    
+                    # Distance doublecheck
+                    if self.distance_doublecheck:
+                        # Check that no distances are between 0 Å and 1.2 Å
+                        unit_cell = Atoms(
+                            symbols = unit_cell_node_feat[:, 0].numpy(),
+                            scaled_positions = unit_cell_pos_frac.numpy(),
+                            cell = cell_params.numpy(),
+                        )
+                        
+                        unit_cell_distances = unit_cell.get_all_distances()
+                        if np.any(
+                            np.logical_and(unit_cell_distances < 1.2, unit_cell_distances > 0.0)
+                        ):
+                            self.write_to_log('distance_doublecheck_log.out', str(raw_path) + '\n' + 'Distances between 0 Å and 1.2 Å\n')
+                            raise ValueError(
+                                'Distances between 0 Å and 1.2 Å'
+                            )
+                    
                     # Loop through all particle sizes
                     for key in h5f["DiscreteParticleGraphs"].keys():
                         node_feat = torch.tensor(h5f["DiscreteParticleGraphs"][key]["NodeFeatures"][:], dtype=torch.float32)
