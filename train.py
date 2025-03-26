@@ -191,6 +191,7 @@ if __name__ == "__main__":
     # Load checkpoint if specified
     if setup_json['start_from_checkpoint'] is not None:
         model.load_state_dict(torch.load(setup_json['checkpoint']))
+        print(f'Model loaded from {setup_json["checkpoint"]}', flush=True)
     else:
         # Set checkpoint to last model
         setup_json['start_from_checkpoint'] = f'{experiment_folder}/latest_model.pth'
