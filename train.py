@@ -190,8 +190,8 @@ if __name__ == "__main__":
     
     # Load checkpoint if specified
     if setup_json['start_from_checkpoint'] is not None:
-        model.load_state_dict(torch.load(setup_json['checkpoint']))
-        print(f'Model loaded from {setup_json["checkpoint"]}', flush=True)
+        model.load_state_dict(torch.load(setup_json['start_from_checkpoint']))
+        print(f'Model loaded from {setup_json["checkpoint"]}')
     else:
         # Set checkpoint to last model
         setup_json['start_from_checkpoint'] = f'{experiment_folder}/latest_model.pth'
@@ -216,8 +216,9 @@ if __name__ == "__main__":
     #%% Train model
 
     # Setup logging file
-    with open(f'{experiment_folder}/training_log.csv', 'w') as f:
-        f.write('epoch,beta,train_loss,train_loss_reconstruction,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_reconstruction,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld,stage\n')
+    if setup_json['start_from_checkpoint'] is not None:
+        with open(f'{experiment_folder}/training_log.csv', 'w') as f:
+            f.write('epoch,beta,train_loss,train_loss_reconstruction,train_loss_cell_parameters,train_loss_cell_positions,train_loss_cell_atoms,train_loss_kld,validation_loss,validation_loss_reconstruction,validation_loss_cell_parameters,validation_loss_cell_positions,validation_loss_cell_atoms,validation_loss_kld,stage\n')
 
     # Load normalization factors
     if setup_json['data']['normalize_cell_parameters']:
@@ -585,16 +586,17 @@ if __name__ == "__main__":
                     pretraining=pretraining,
                 )
                 
-                # Store latent space information
-                latent_space_dict['epoch'].extend([epoch] * this_batch_size)
-                latent_space_dict['posterior_mean'].extend(post_mean.tolist())
-                latent_space_dict['posterior_std'].extend(post_log_std.tolist())
-                latent_space_dict['prior_mean'].extend(prior_mean.tolist())
-                latent_space_dict['prior_std'].extend(prior_log_std.tolist())
-                latent_space_dict['np_size'].extend(batch.y['np_size'].tolist())
-                latent_space_dict['crystal_type'].extend(batch.y['crystal_type'])
-                latent_space_dict['crystal_system'].extend(batch.y['crystal_system'])
-                latent_space_dict['space_group'].extend(batch.y['space_group_number'])
+                if epoch % 5 == 0:
+                    # Store latent space information
+                    latent_space_dict['epoch'].extend([epoch] * this_batch_size)
+                    latent_space_dict['posterior_mean'].extend(post_mean.tolist())
+                    latent_space_dict['posterior_std'].extend(post_log_std.tolist())
+                    latent_space_dict['prior_mean'].extend(prior_mean.tolist())
+                    latent_space_dict['prior_std'].extend(prior_log_std.tolist())
+                    latent_space_dict['np_size'].extend(batch.y['np_size'].tolist())
+                    latent_space_dict['crystal_type'].extend(batch.y['crystal_type'])
+                    latent_space_dict['crystal_system'].extend(batch.y['crystal_system'])
+                    latent_space_dict['space_group'].extend(batch.y['space_group_number'])
 
                 # Get true cell parameters and atom positions
                 if setup_json['data']['graph_type'] in ['unit_cell', 'super_cell']:
@@ -743,9 +745,10 @@ if __name__ == "__main__":
         else:
             patience_counter += 1
         
-        # Save latent space information
-        latent_space_df = pd.DataFrame(latent_space_dict, columns=latent_space_dict.keys())
-        latent_space_df.to_csv(f'{experiment_folder}/latent_space_log.csv', index=False, mode='a')
+        if epoch % 5 == 0:
+            # Save latent space information
+            latent_space_df = pd.DataFrame(latent_space_dict, columns=latent_space_dict.keys())
+            latent_space_df.to_csv(f'{experiment_folder}/latent_space_log.csv', index=False, mode='a')
 
         # Save latest model
         torch.save(model.state_dict(), f'{experiment_folder}/latest_model.pth')
