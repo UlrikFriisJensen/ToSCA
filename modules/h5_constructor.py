@@ -165,15 +165,15 @@ class h5Constructor:
             pass
 
         # Check small distances
-        # try:
-        #     unit_cell_distances = unit_cell.get_all_distances()
-        #     if np.any(
-        #         np.logical_and(unit_cell_distances < 1.2, unit_cell_distances > 0.0)
-        #     ):
-        #         print("\tUnwanted overlapping atoms", cif_name, ".. skipping")
-        #         return
-        # except:
-        #     pass
+        try:
+            unit_cell_distances = unit_cell.get_all_distances()
+            if np.any(
+                np.logical_and(unit_cell_distances < 1.2, unit_cell_distances > 0.0)
+            ):
+                print("\tUnwanted overlapping atoms", cif_name, ".. skipping")
+                return
+        except:
+            pass
 
         # Find node features
         node_features = np.array(
