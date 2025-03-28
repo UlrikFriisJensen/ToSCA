@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Interpolation_Supercell_latentLog_2d_latentMSE_smallerEncoder",
+    "experiment_name" : "Interpolation_small_Supercell_latentLog_2d_latentMSE_smallerEncoder",
     "experiment_description" : "Run with interpolation data between rocksalt, spinel and zincblende structures.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -8,7 +8,7 @@
     "model_root" : "./models/",
     "disable_tqdm" : true,
     "data" : {
-        "name" : "CHILI-Interpolation",
+        "name" : "CHILI-Interpolation_small",
         "graph_type" : "super_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
