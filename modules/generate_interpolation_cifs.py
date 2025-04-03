@@ -633,9 +633,6 @@ if __name__ == "__main__":
             interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
             interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
 
-            print(f"Removed {len(duplicate_indices)} duplicate structures")
-
-
             # Save interpolations as cif files
             for interpolation_i in range(len(interp_step_list)):
                 interpolated_structure = Atoms(
@@ -650,3 +647,5 @@ if __name__ == "__main__":
                     write(f'{args.output_folder}CadmiumIodide_{metal}.cif', interpolated_structure)
                 else:
                     write(f'{args.output_folder}interpolated_NickelArsenide_to_CadmiumIodide_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)
+    else:
+        raise ValueError(f"Interpolation type {args.interpolation_type} not recognized. Please use 'rocksalt_to_spinel_to_zincblende' or 'nickelArsenide_to_cadmiumIodide'.")

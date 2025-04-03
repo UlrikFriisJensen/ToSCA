@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=Simulate_interpolations
 
-#SBATCH --array=3 #1-10%4
+#SBATCH --array=1-10%4
 
 #SBATCH --ntasks=1 --cpus-per-task=12 --mem=32G
 
