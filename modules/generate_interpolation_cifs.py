@@ -51,6 +51,32 @@ def zincblende_transformation(zincblende_unitcell, expansion_factor=2,  translat
     
     return zincblende_supercell
 
+def nickelArsenide_transformation(nickelArsenide_unitcell, expansion_factor=2, translation=0.0, inversion=False):
+    # Make a supercell of the unit cell
+    nickelArsenide_supercell = make_supercell(nickelArsenide_unitcell, np.diag([expansion_factor, expansion_factor, expansion_factor]))
+
+    if inversion:
+        # Invert the atoms in the supercell
+        nickelArsenide_supercell.set_scaled_positions(1 - nickelArsenide_supercell.get_scaled_positions())
+
+    # Translate the atoms in the supercell
+    nickelArsenide_supercell.set_scaled_positions(nickelArsenide_supercell.get_scaled_positions() + translation) 
+    
+    return nickelArsenide_supercell
+
+def cadmiumIodide_transformation(cadmiumIodide_unitcell, expansion_factor=2, translation=0.0, inversion=False):
+    # Make a supercell of the unit cell
+    cadmiumIodide_supercell = make_supercell(cadmiumIodide_unitcell, np.diag([expansion_factor, expansion_factor, expansion_factor]))
+    
+    if inversion:
+        # Invert the atoms in the supercell
+        cadmiumIodide_supercell.set_scaled_positions(1 - cadmiumIodide_supercell.get_scaled_positions())
+        
+    # Translate the atoms in the supercell
+    cadmiumIodide_supercell.set_scaled_positions(cadmiumIodide_supercell.get_scaled_positions() + translation)
+    
+    return cadmiumIodide_supercell
+
 def sigmoid_function(x, center=0.5, steepness=10):
     return 1 / (1 + np.exp(-steepness * (x - center)))
 
@@ -319,12 +345,132 @@ def zincblende_to_spinel(zincblende_structure, spinel_structure, interpolation_s
     
     return interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list
 
+def nickelArsenide_to_cadmiumIodide(nickelArsenide_structure, cadmiumIodide_structure, interpolation_steps=5, atom_samples=5, identification_threshold=0.1):
+    # Sort the atoms
+    nickelArsenide_structure = ase_sort(nickelArsenide_structure, tags=nickelArsenide_structure.get_atomic_numbers())
+    cadmiumIodide_structure = ase_sort(cadmiumIodide_structure, tags=cadmiumIodide_structure.get_atomic_numbers())    
+    
+    # Get cell parameters
+    nickelArsenide_cell_parameters = nickelArsenide_structure.cell.cellpar()
+    cadmiumIodide_cell_parameters = cadmiumIodide_structure.cell.cellpar()
+    
+    # Get the scaled positions of the atoms
+    nickelArsenide_positions = nickelArsenide_structure.get_scaled_positions()
+    cadmiumIodide_positions = cadmiumIodide_structure.get_scaled_positions()
+    
+    # Get the atomic numbers of the atoms
+    nickelArsenide_atoms = nickelArsenide_structure.get_atomic_numbers()
+    cadmiumIodide_atoms = cadmiumIodide_structure.get_atomic_numbers()
+    
+    # Find the positions of the oxygen atoms
+    nickelArsenide_O_positions = nickelArsenide_positions[nickelArsenide_atoms == 8]
+    cadmiumIodide_O_positions = cadmiumIodide_positions[cadmiumIodide_atoms == 8]
+    
+    # Sort the oxygen atoms by distance to the origo and then by coordinate TODO: Do this
+    temp_O_df = pd.DataFrame(nickelArsenide_O_positions, columns=['x', 'y', 'z'])
+    temp_O_df['distance'] = np.linalg.norm(nickelArsenide_O_positions, axis=1)
+    nickelArsenide_O_positions = nickelArsenide_O_positions[temp_O_df.sort_values(['distance', 'x', 'y', 'z']).index]
+    
+    temp_O_df = pd.DataFrame(cadmiumIodide_O_positions, columns=['x', 'y', 'z'])
+    temp_O_df['distance'] = np.linalg.norm(cadmiumIodide_O_positions, axis=1)
+    cadmiumIodide_O_positions = cadmiumIodide_O_positions[temp_O_df.sort_values(['distance', 'x', 'y', 'z']).index]
+
+    del temp_O_df
+    
+    # Find the positions of the metal atoms
+    nickelArsenide_M_positions = nickelArsenide_positions[nickelArsenide_atoms != 8]
+    cadmiumIodide_M_positions = cadmiumIodide_positions[cadmiumIodide_atoms != 8]
+    
+    # Structure metallic element
+    metallic_element = nickelArsenide_structure.get_atomic_numbers()[-1]
+    
+    # Find the metal atoms that are in both the nickelArsenide structure and the cadmiumIodide structure
+    nickelArsenide_common_M_positions = []
+    cadmiumIodide_common_M_positions = []
+    for index in range(len(nickelArsenide_M_positions)):
+        distances = np.linalg.norm(cadmiumIodide_M_positions - nickelArsenide_M_positions[index], axis=1)
+        if np.min(distances) < identification_threshold:
+            nickelArsenide_common_M_positions.append(index)
+            cadmiumIodide_common_M_positions.append(np.argmin(distances))
+    
+    nickelArsenide_different_M_positions = [index for index in range(len(nickelArsenide_M_positions)) if index not in nickelArsenide_common_M_positions]
+    cadmiumIodide_different_M_positions = [index for index in range(len(cadmiumIodide_M_positions)) if index not in cadmiumIodide_common_M_positions]
+    
+    interp_step_list = []
+    sample_i_list = []
+    interpolated_cell_parameters_list = []
+    interpolated_atoms_list = []
+    interpolated_positions_list = []
+    for interp_step_i in range(interpolation_steps + 1):
+        if interp_step_i == 0:
+            # Save the nickelArsenide structure
+            interp_step_list.append(interp_step_i)
+            sample_i_list.append(0)
+            interpolated_cell_parameters_list.append(nickelArsenide_cell_parameters)
+            interpolated_atoms_list.append(nickelArsenide_atoms)
+            interpolated_positions_list.append(nickelArsenide_positions)
+            continue
+        elif interp_step_i == interpolation_steps:
+            # Save the cadmiumIodide structure
+            interp_step_list.append(interp_step_i)
+            sample_i_list.append(0)
+            interpolated_cell_parameters_list.append(cadmiumIodide_cell_parameters)
+            interpolated_atoms_list.append(cadmiumIodide_atoms)
+            interpolated_positions_list.append(cadmiumIodide_positions)
+            continue
+        else:
+            # Interpolate the cell parameters 
+            interpolated_cell_parameters = nickelArsenide_cell_parameters + ((cadmiumIodide_cell_parameters - nickelArsenide_cell_parameters) * interp_step_i / interpolation_steps)
+            
+            # Interpolate the positions of oxygens
+            interpolated_O_positions = nickelArsenide_O_positions + ((cadmiumIodide_O_positions - nickelArsenide_O_positions) * interp_step_i / interpolation_steps)
+            
+            # Interpolate the positions of the common metal atoms
+            interpolated_common_M_positions = nickelArsenide_M_positions[nickelArsenide_common_M_positions] + ((cadmiumIodide_M_positions[cadmiumIodide_common_M_positions] - nickelArsenide_M_positions[nickelArsenide_common_M_positions]) * interp_step_i / interpolation_steps)
+            
+            for sample_i in range(atom_samples):                            
+                # Non-shared metal atoms from nickel arsenide to keep
+                n_nickelArsenide_different_M_positions = len(nickelArsenide_different_M_positions)
+                
+                # sigmoid probability for keeping an atom
+                p_1 = 1 - (interp_step_i / interpolation_steps)
+                
+                nickelArsenide_indeces_to_keep = np.where(np.random.random(n_nickelArsenide_different_M_positions) < p_1)[0]
+
+                interpolated_different_M_positions = nickelArsenide_M_positions[nickelArsenide_different_M_positions][nickelArsenide_indeces_to_keep]
+                
+                # Construct the interpolated structure
+                interpolated_atoms = np.concatenate(
+                    [
+                        [8] * len(interpolated_O_positions),
+                        [metallic_element] * len(interpolated_common_M_positions),
+                        [metallic_element] * len(interpolated_different_M_positions)
+                        ]
+                    )
+                interpolated_positions = np.concatenate(
+                    [
+                        interpolated_O_positions, 
+                        interpolated_common_M_positions, 
+                        interpolated_different_M_positions, 
+                    ]
+                )
+                
+                # Save the interpolated structure
+                interp_step_list.append(interp_step_i)
+                sample_i_list.append(sample_i)
+                interpolated_cell_parameters_list.append(interpolated_cell_parameters)
+                interpolated_atoms_list.append(interpolated_atoms)
+                interpolated_positions_list.append(interpolated_positions)  
+        
+    return interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list
+
 #%% Main
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--cif_folder', type=str, required=True)
     parser.add_argument('--output_folder', type=str, required=True)
+    parser.add_argument('--interpolation_type', type=str, required=True)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--interpolation_steps', type=int, default=10)
     parser.add_argument('--atom_samples', type=int, default=5)
@@ -338,109 +484,169 @@ if __name__ == "__main__":
     # Seed for reproducibility
     np.random.seed(args.seed)
     
-    # Get the relevant CIF files
-    
-    # Rock Salt
-    rocksalt_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('RockSalt*.cif')]
-    rocksalt_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in rocksalt_structures]
-    rocksalt_metals = [composition[:-1] for composition in rocksalt_compositions]
-    
-    # Spinel
-    spinel_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('Spinel*.cif')]
-    spinel_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in spinel_structures]
-    spinel_metals = [composition[: len(composition[:-3]) // 2] for composition in spinel_compositions]
-    
-    # Zinc Blende
-    zincblende_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('ZincBlende*.cif')]
-    zincblende_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in zincblende_structures]
-    zincblende_metals = [composition[:-1] for composition in zincblende_compositions]
-    
-    # Generate the interpolated structures
-    for metal in tqdm(rocksalt_metals, desc='Generating interpolated structures'):
-        # Read the structures
+    if args.interpolation_type == 'rocksalt_to_spinel_to_zincblende':
+        # Get the relevant CIF files
+        
         # Rock Salt
-        rocksalt_structure = read(rocksalt_structures[rocksalt_metals.index(metal)])
-        rocksalt_transformed = rocksalt_transformation(rocksalt_structure, expansion_factor=2, translation=0.25, inversion=False)
+        rocksalt_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('RockSalt*.cif')]
+        rocksalt_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in rocksalt_structures]
+        rocksalt_metals = [composition[:-1] for composition in rocksalt_compositions]
         
         # Spinel
-        spinel_structure = read(spinel_structures[spinel_metals.index(metal)])
-        spinel_transformed = spinel_transformation(spinel_structure, expansion_factor=1, translation=0.1374, inversion=False)
+        spinel_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('Spinel*.cif')]
+        spinel_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in spinel_structures]
+        spinel_metals = [composition[: len(composition[:-3]) // 2] for composition in spinel_compositions]
         
         # Zinc Blende
-        zincblende_structure = read(zincblende_structures[zincblende_metals.index(metal)])
-        zincblende_transformed = zincblende_transformation(zincblende_structure, expansion_factor=2, translation=0.125, inversion=True)
+        zincblende_structures = [str(filepath) for filepath in Path(args.cif_folder).rglob('ZincBlende*.cif')]
+        zincblende_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in zincblende_structures]
+        zincblende_metals = [composition[:-1] for composition in zincblende_compositions]
         
-        # Generate rocksalt to spinel interpolations
-        interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list = rocksalt_to_spinel(rocksalt_transformed, spinel_transformed, interpolation_steps=args.interpolation_steps, atom_samples=args.atom_samples, identification_threshold=args.identification_threshold)
-        
-        # Check for and remove duplicate structures
-        duplicate_indices = []
-        for i in range(len(interp_step_list)):
-            for j in range(i, len(interp_step_list)):
-                if i == j:
-                    continue
-                if np.array_equal(interpolated_positions_list[i], interpolated_positions_list[j]) and np.array_equal(interpolated_cell_parameters_list[i], interpolated_cell_parameters_list[j]):
-                    if j == len(interp_step_list) - 1:
-                        duplicate_indices.append(i)
-                    else:
-                        duplicate_indices.append(j)
-
-        interp_step_list = [interp_step_list[i] for i in range(len(interp_step_list)) if i not in duplicate_indices]
-        sample_i_list = [sample_i_list[i] for i in range(len(sample_i_list)) if i not in duplicate_indices]
-        interpolated_cell_parameters_list = [interpolated_cell_parameters_list[i] for i in range(len(interpolated_cell_parameters_list)) if i not in duplicate_indices]
-        interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
-        interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
-        
-        # Save interpolations as cif files
-        for interpolation_i in range(len(interp_step_list)):
-            interpolated_structure = Atoms(
-                cell=interpolated_cell_parameters_list[interpolation_i],
-                scaled_positions=interpolated_positions_list[interpolation_i],
-                numbers=interpolated_atoms_list[interpolation_i],
-                pbc=True,
-            )
-            if interpolation_i == 0:
-                write(f'{args.output_folder}rocksalt_{metal}.cif', interpolated_structure)
-            elif interpolation_i == len(interp_step_list) - 1:
-                write(f'{args.output_folder}spinel_{metal}.cif', interpolated_structure)
-            else:
-                write(f'{args.output_folder}interpolated_rocksalt_to_spinel_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)
+        # Generate the interpolated structures
+        for metal in tqdm(rocksalt_metals, desc='Generating interpolated structures'):
+            # Read the structures
+            # Rock Salt
+            rocksalt_structure = read(rocksalt_structures[rocksalt_metals.index(metal)])
+            rocksalt_transformed = rocksalt_transformation(rocksalt_structure, expansion_factor=2, translation=0.25, inversion=False)
             
-        # Generate zincblende to spinel interpolations
-        interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list = zincblende_to_spinel(zincblende_transformed, spinel_transformed, interpolation_steps=args.interpolation_steps, atom_samples=args.atom_samples, identification_threshold=args.identification_threshold)
+            # Spinel
+            spinel_structure = read(spinel_structures[spinel_metals.index(metal)])
+            spinel_transformed = spinel_transformation(spinel_structure, expansion_factor=1, translation=0.1374, inversion=False)
+            
+            # Zinc Blende
+            zincblende_structure = read(zincblende_structures[zincblende_metals.index(metal)])
+            zincblende_transformed = zincblende_transformation(zincblende_structure, expansion_factor=2, translation=0.125, inversion=True)
+            
+            # Generate rocksalt to spinel interpolations
+            interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list = rocksalt_to_spinel(rocksalt_transformed, spinel_transformed, interpolation_steps=args.interpolation_steps, atom_samples=args.atom_samples, identification_threshold=args.identification_threshold)
+            
+            # Check for and remove duplicate structures
+            duplicate_indices = []
+            for i in range(len(interp_step_list)):
+                for j in range(i, len(interp_step_list)):
+                    if i == j:
+                        continue
+                    if np.array_equal(interpolated_positions_list[i], interpolated_positions_list[j]) and np.array_equal(interpolated_cell_parameters_list[i], interpolated_cell_parameters_list[j]):
+                        if j == len(interp_step_list) - 1:
+                            duplicate_indices.append(i)
+                        else:
+                            duplicate_indices.append(j)
 
-        # Check for and remove duplicate structures
-        duplicate_indices = []
-        for i in range(len(interp_step_list)):
-            for j in range(i, len(interp_step_list)):
-                if i == j:
-                    continue
-                if np.array_equal(interpolated_positions_list[i], interpolated_positions_list[j]) and np.array_equal(interpolated_cell_parameters_list[i], interpolated_cell_parameters_list[j]):
-                    if j == len(interp_step_list) - 1:
-                        duplicate_indices.append(i)
-                    else:
-                        duplicate_indices.append(j)
+            interp_step_list = [interp_step_list[i] for i in range(len(interp_step_list)) if i not in duplicate_indices]
+            sample_i_list = [sample_i_list[i] for i in range(len(sample_i_list)) if i not in duplicate_indices]
+            interpolated_cell_parameters_list = [interpolated_cell_parameters_list[i] for i in range(len(interpolated_cell_parameters_list)) if i not in duplicate_indices]
+            interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
+            interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
+            
+            # Save interpolations as cif files
+            for interpolation_i in range(len(interp_step_list)):
+                interpolated_structure = Atoms(
+                    cell=interpolated_cell_parameters_list[interpolation_i],
+                    scaled_positions=interpolated_positions_list[interpolation_i],
+                    numbers=interpolated_atoms_list[interpolation_i],
+                    pbc=True,
+                )
+                if interpolation_i == 0:
+                    write(f'{args.output_folder}rocksalt_{metal}.cif', interpolated_structure)
+                elif interpolation_i == len(interp_step_list) - 1:
+                    write(f'{args.output_folder}spinel_{metal}.cif', interpolated_structure)
+                else:
+                    write(f'{args.output_folder}interpolated_rocksalt_to_spinel_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)
+                
+            # Generate zincblende to spinel interpolations
+            interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list = zincblende_to_spinel(zincblende_transformed, spinel_transformed, interpolation_steps=args.interpolation_steps, atom_samples=args.atom_samples, identification_threshold=args.identification_threshold)
 
-        interp_step_list = [interp_step_list[i] for i in range(len(interp_step_list)) if i not in duplicate_indices]
-        sample_i_list = [sample_i_list[i] for i in range(len(sample_i_list)) if i not in duplicate_indices]
-        interpolated_cell_parameters_list = [interpolated_cell_parameters_list[i] for i in range(len(interpolated_cell_parameters_list)) if i not in duplicate_indices]
-        interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
-        interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
+            # Check for and remove duplicate structures
+            duplicate_indices = []
+            for i in range(len(interp_step_list)):
+                for j in range(i, len(interp_step_list)):
+                    if i == j:
+                        continue
+                    if np.array_equal(interpolated_positions_list[i], interpolated_positions_list[j]) and np.array_equal(interpolated_cell_parameters_list[i], interpolated_cell_parameters_list[j]):
+                        if j == len(interp_step_list) - 1:
+                            duplicate_indices.append(i)
+                        else:
+                            duplicate_indices.append(j)
 
-        # Save interpolations as cif files
-        for interpolation_i in range(len(interp_step_list)):
-            interpolated_structure = Atoms(
-                cell=interpolated_cell_parameters_list[interpolation_i],
-                scaled_positions=interpolated_positions_list[interpolation_i],
-                numbers=interpolated_atoms_list[interpolation_i],
-                pbc=True,
-            )
-            if interpolation_i == 0:
-                write(f'{args.output_folder}zincblende_{metal}.cif', interpolated_structure)
-            elif interpolation_i == len(interp_step_list) - 1:
-                write(f'{args.output_folder}spinel_{metal}.cif', interpolated_structure)
-            else:
-                write(f'{args.output_folder}interpolated_zincblende_to_spinel_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)
+            interp_step_list = [interp_step_list[i] for i in range(len(interp_step_list)) if i not in duplicate_indices]
+            sample_i_list = [sample_i_list[i] for i in range(len(sample_i_list)) if i not in duplicate_indices]
+            interpolated_cell_parameters_list = [interpolated_cell_parameters_list[i] for i in range(len(interpolated_cell_parameters_list)) if i not in duplicate_indices]
+            interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
+            interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
+
+            # Save interpolations as cif files
+            for interpolation_i in range(len(interp_step_list)):
+                interpolated_structure = Atoms(
+                    cell=interpolated_cell_parameters_list[interpolation_i],
+                    scaled_positions=interpolated_positions_list[interpolation_i],
+                    numbers=interpolated_atoms_list[interpolation_i],
+                    pbc=True,
+                )
+                if interpolation_i == 0:
+                    write(f'{args.output_folder}zincblende_{metal}.cif', interpolated_structure)
+                elif interpolation_i == len(interp_step_list) - 1:
+                    write(f'{args.output_folder}spinel_{metal}.cif', interpolated_structure)
+                else:
+                    write(f'{args.output_folder}interpolated_zincblende_to_spinel_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)
+    elif args.interpolation_type == 'nickelArsenide_to_cadmiumIodide':
+        # Get the relevant CIF files
+        
+        # Nickel Arsenide structure
+        nickelArsenide_structures = [str(filepath) for filepath in Path('./data/CIFs/').rglob('NickelArsenide*.cif')]
+        nickelArsenide_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in nickelArsenide_structures]
+        nickelArsenide_metals = [composition[:-1] for composition in nickelArsenide_compositions]
+
+        # Cadmium Iodide structure
+        cadmiumIodide_structures = [str(filepath) for filepath in Path('./data/CIFs/').rglob('CadmiumIodide*.cif')]
+        cadmiumIodide_compositions = [filepath.split('/')[-1].split('_')[-1].split('.')[0] for filepath in cadmiumIodide_structures]
+        cadmiumIodide_metals = [composition[:-2] for composition in cadmiumIodide_compositions]
     
-    
-    
+        # Generate the interpolated structures
+        for metal in tqdm(nickelArsenide_metals, desc='Generating interpolated structures'):
+            # Read the structures
+            # Nickel Arsenide
+            nickelArsenide_structure = read(nickelArsenide_structures[nickelArsenide_metals.index(metal)])
+            nickelArsenide_transformed = nickelArsenide_transformation(nickelArsenide_structure, expansion_factor=2, translation=0.0, inversion=False)
+            
+            # Cadmium Iodide
+            cadmiumIodide_structure = read(cadmiumIodide_structures[cadmiumIodide_metals.index(metal)])
+            cadmiumIodide_transformed = cadmiumIodide_transformation(cadmiumIodide_structure, expansion_factor=2, translation=0.0, inversion=False)
+            
+            # Generate nickelArsenide to cadmiumIodide interpolations
+            interp_step_list, sample_i_list, interpolated_cell_parameters_list, interpolated_atoms_list, interpolated_positions_list = nickelArsenide_to_cadmiumIodide(nickelArsenide_transformed, cadmiumIodide_transformed, identification_threshold=0.1)
+
+            # Check for and remove duplicate structures
+            duplicate_indices = []
+            for i in range(len(interp_step_list)):
+                for j in range(i, len(interp_step_list)):
+                    if i == j:
+                        continue
+                    if np.array_equal(interpolated_positions_list[i], interpolated_positions_list[j]) and np.array_equal(interpolated_cell_parameters_list[i], interpolated_cell_parameters_list[j]):
+                        if j == len(interp_step_list) - 1:
+                            duplicate_indices.append(i)
+                        else:
+                            duplicate_indices.append(j)
+
+            interp_step_list = [interp_step_list[i] for i in range(len(interp_step_list)) if i not in duplicate_indices]
+            sample_i_list = [sample_i_list[i] for i in range(len(sample_i_list)) if i not in duplicate_indices]
+            interpolated_cell_parameters_list = [interpolated_cell_parameters_list[i] for i in range(len(interpolated_cell_parameters_list)) if i not in duplicate_indices]
+            interpolated_atoms_list = [interpolated_atoms_list[i] for i in range(len(interpolated_atoms_list)) if i not in duplicate_indices]
+            interpolated_positions_list = [interpolated_positions_list[i] for i in range(len(interpolated_positions_list)) if i not in duplicate_indices]
+
+            print(f"Removed {len(duplicate_indices)} duplicate structures")
+
+
+            # Save interpolations as cif files
+            for interpolation_i in range(len(interp_step_list)):
+                interpolated_structure = Atoms(
+                    cell=interpolated_cell_parameters_list[interpolation_i],
+                    scaled_positions=interpolated_positions_list[interpolation_i],
+                    numbers=interpolated_atoms_list[interpolation_i],
+                    pbc=True,
+                )
+                if interpolation_i == 0:
+                    write(f'{args.output_folder}NickelArsenide_{metal}.cif', interpolated_structure)
+                elif interpolation_i == len(interp_step_list) - 1:
+                    write(f'{args.output_folder}CadmiumIodide_{metal}.cif', interpolated_structure)
+                else:
+                    write(f'{args.output_folder}interpolated_NickelArsenide_to_CadmiumIodide_step{interp_step_list[interpolation_i]}_sample{sample_i_list[interpolation_i]}_{metal}.cif', interpolated_structure)

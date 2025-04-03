@@ -14,5 +14,5 @@
 hostname
 echo $CUDA_VISIBLE_DEVICES
 
-python ./modules/h5_constructor.py --batch ./batch_$SLURM_ARRAY_TASK_ID.txt --output ./data/h5/Interpolations_small/
+python ./modules/h5_constructor.py --batch ./batch_$SLURM_ARRAY_TASK_ID.txt --output ./data/h5/Interpolations_v2/
 
