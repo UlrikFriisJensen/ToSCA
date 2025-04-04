@@ -9,5 +9,5 @@
 
 hostname
 
-python ./zip_data.py --data_folder ./data/h5/Interpolations_small/ --output_file ./data/CHILI-Interpolation_small 
+python ./zip_data.py --data_folder ./data/h5/Interpolations_v2/ --output_file ./data/CHILI-Interpolation_v2
 

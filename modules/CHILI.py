@@ -128,6 +128,11 @@ class CHILI(Dataset):
                 'https://sid.erda.dk/share_redirect/ao0F4qtjMR',
                 self.raw_dir,
             )
+        elif self.dataset == "CHILI-Interpolation_v2":
+            path = download_url(
+                'https://sid.erda.dk/share_redirect/EiqiI1WwQr',
+                self.raw_dir,
+            )
         else:
             path = download_url(
                 f"https://erda.ku.dk/archives/c9d91863f89c3a7e87201c175ff4b213/Nanostructure_Data/Data_for_MachineLearning/DatasetPaper/{self.dataset}.zip",

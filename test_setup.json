@@ -1,6 +1,6 @@
 {
-    "experiment_name" : "Interpolation_small_Supercell_latentLog_2d_latentMSE_biggerDecoder_v2",
-    "experiment_description" : "Run with interpolation data between rocksalt, spinel and zincblende structures, using same model parameters as best normal run.",
+    "experiment_name" : "Interpolation_v2_Supercell_latentLog_2d_latentMSE_biggerDecoder",
+    "experiment_description" : "Run with interpolation data between nickel arsenide and cadmium iodide structures, using same model parameters as best normal run.",
     "experiment_start" : null,
     "experiment_end" : null,
     "random_seed" : 42,
@@ -8,7 +8,7 @@
     "model_root" : "./models/",
     "disable_tqdm" : true,
     "data" : {
-        "name" : "CHILI-Interpolation_small",
+        "name" : "CHILI-Interpolation_v2",
         "graph_type" : "super_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
