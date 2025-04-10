@@ -1,5 +1,5 @@
 {
-    "experiment_name" : "Interpolation_v2_Supercell_latentLog_2d_latentMSE_biggerDecoder",
+    "experiment_name" : "Interpolation_v2_Unitcell_latentLog_2d_latentMSE_biggerDecoder",
     "experiment_description" : "Run with interpolation data between nickel arsenide and cadmium iodide structures, using same model parameters as best normal run.",
     "experiment_start" : null,
     "experiment_end" : null,
@@ -9,7 +9,7 @@
     "disable_tqdm" : true,
     "data" : {
         "name" : "CHILI-Interpolation_v2",
-        "graph_type" : "super_cell",
+        "graph_type" : "unit_cell",
         "root" : "./data/",
         "split_strategy" : "stratified",
         "stratify_column" : "Crystal type",
