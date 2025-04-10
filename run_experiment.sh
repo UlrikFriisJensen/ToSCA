@@ -12,7 +12,7 @@
 hostname
 echo $CUDA_VISIBLE_DEVICES
 
-python train.py --setup_json test_setup.json
+# python train.py --setup_json test_setup.json
 
 python test.py --test_data validation --setup_json ./models/Interpolation_v2_Supercell_latentLog_2d_latentMSE_biggerDecoder/setup_json.json
 
