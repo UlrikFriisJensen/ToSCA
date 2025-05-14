@@ -18,3 +18,7 @@ python test.py --test_data validation --setup_json ./models/Interpolation_v2_Uni
 
 # python test_experimentalData.py --data_folder ./data/Experimental/Jens/ --setup_json ./models/Combined_data_run_3d/setup_json.json
 # python test_interpolation.py --setup_json ./models/Combined_data_run_3d/setup_json.json
+
+
+# python test.py --test_data test --setup_json ./models/Interpolation_v2_Unitcell_latentLog_2d_latentMSE_biggerDecoder/setup_json.json
+# python test.py --test_data test --setup_json ./models/Supercell_latentLog_beta_annealing_3d_latentMSE_biggerDecoder_v2/setup_json.json
