@@ -199,7 +199,7 @@ if __name__ == "__main__":
             loss_CrystalType = {'total': [], 'reconstruction_loss': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'kld': [], 'crystalType': [], 'particleSize': []}
             
             # Crystal type dependent reconstructions
-            reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'latent_space_mean': [], 'latent_space_std': [], 'latent_space_mean_prior': [], 'latent_space_std_prior': [], "true_cell_parameters": [], "true_cell_positions": [], "true_cell_atoms": []}
+            reconstructions_CrystalType = {'crystalType': [], 'n_atoms': [], 'n_oxygens': [], 'n_metals': [], 'cell_parameters': [], 'cell_positions': [], 'cell_atoms': [], 'cell_parameters_prior': [], 'cell_positions_prior': [], 'cell_atoms_prior': [], 'latent_space_mean': [], 'latent_space_std': [], 'latent_space_mean_prior': [], 'latent_space_std_prior': [], "true_cell_parameters": [], "true_cell_positions": [], "true_cell_atoms": []}
             
         with torch.no_grad():
             for batch in tqdm(data_loader, desc='Testing', disable=setup_json['disable_tqdm']):
@@ -349,10 +349,13 @@ if __name__ == "__main__":
                         
                         # Find argmax of atoms
                         cell_atoms_rec = torch.argmax(cell_atoms[batch_index], dim=1)
+                        prior_cell_atoms_rec = torch.argmax(prior_cell_atoms[batch_index], dim=1)
                         
                         # Remove atoms with atom number 0
                         cell_positions_rec = cell_positions[batch_index][cell_atoms_rec != 0]
                         cell_atoms_rec = cell_atoms_rec[cell_atoms_rec != 0]
+                        prior_cell_positions_rec = prior_cell_positions[batch_index][prior_cell_atoms_rec != 0]
+                        prior_cell_atoms_rec = prior_cell_atoms_rec[prior_cell_atoms_rec != 0]
                         
                         # Calculate loss
                         ct_loss_cell_parameters = loss_fn_cell_parameters(cell_parameters[batch_index], cell_parameters_true[batch_index])
@@ -388,6 +391,9 @@ if __name__ == "__main__":
                         reconstructions_CrystalType['cell_parameters'].append(cell_parameters_pred[batch_index].detach().cpu().tolist())
                         reconstructions_CrystalType['cell_positions'].append(cell_positions_rec.detach().cpu().tolist())
                         reconstructions_CrystalType['cell_atoms'].append(cell_atoms_rec.detach().cpu().tolist())
+                        reconstructions_CrystalType['cell_parameters_prior'].append(prior_cell_parameters_pred[batch_index].detach().cpu().tolist())
+                        reconstructions_CrystalType['cell_positions_prior'].append(prior_cell_positions_rec.detach().cpu().tolist())
+                        reconstructions_CrystalType['cell_atoms_prior'].append(prior_cell_atoms_rec.detach().cpu().tolist())
                         reconstructions_CrystalType['latent_space_mean'].append(post_mean[batch_index].detach().cpu().tolist())
                         reconstructions_CrystalType['latent_space_std'].append(post_log_std[batch_index].detach().cpu().tolist())
                         reconstructions_CrystalType['latent_space_mean_prior'].append(prior_mean[batch_index].detach().cpu().tolist())
