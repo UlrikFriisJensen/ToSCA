@@ -120,16 +120,6 @@ class CHILI(Dataset):
         # Download to `self.raw_dir`.
         if self.dataset == "CHILI-Interpolation":
             path = download_url(
-                'https://sid.erda.dk/share_redirect/gY07tsqdI9',
-                self.raw_dir,
-            )
-        elif self.dataset == "CHILI-Interpolation_small":
-            path = download_url(
-                'https://sid.erda.dk/share_redirect/ao0F4qtjMR',
-                self.raw_dir,
-            )
-        elif self.dataset == "CHILI-Interpolation_v2":
-            path = download_url(
                 'https://sid.erda.dk/share_redirect/EiqiI1WwQr',
                 self.raw_dir,
             )

@@ -192,7 +192,7 @@ if __name__ == "__main__":
         ls_sample = []
         sample_crystal_types = []
 
-        if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation', 'CHILI-Interpolation_v2']:
+        if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation']:
             # Logging for analysis of Crystal type dependent performance
             
             # Crystal type dependent losses
@@ -331,7 +331,7 @@ if __name__ == "__main__":
                 # Create CIF files
                 for batch_index in range(this_batch_size):
                     # Crystal type dependent reconstructions
-                    if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation', 'CHILI-Interpolation_v2']:
+                    if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation']:
                         ct_cell_atoms_true = cell_atoms_true[batch_index]
                         # Simplify atom identities
                         if setup_json['training']['simplified_atom_identities']:
@@ -519,7 +519,7 @@ if __name__ == "__main__":
                 f.write(f'KLD loss: {kld_loss:.6f}\n')
                 
             # Saving crystal type dependent information
-            if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation', 'CHILI-Interpolation_v2']:
+            if setup_json['data']['name'] in ['CHILI-3K', 'CHILI-Interpolation']:
                 # Make folders
                 pathlib.Path(f'{setup_json["model_root"]}{setup_json["experiment_name"]}/CrystalTypeAnalysis').mkdir(parents=True, exist_ok=True)
                 
