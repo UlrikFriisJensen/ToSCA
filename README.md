@@ -30,7 +30,7 @@ will automatically download and correctly unpack the `CHILI-Interpolation` datas
 We have provided an example in this [Python file](https://github.com/UlrikFriisJensen/CHILI/blob/main/distanceregression_example.py) as well as this [Jupyter Notebook](https://github.com/UlrikFriisJensen/CHILI/blob/main/distanceregression_example_notebook.ipynb) with more details on how to use the `CHILI` dataset class to train a basic GCN model on distance regression.
 
 ## Direct download
-Click on the following hyperlinks to directly download the raw data for [`CHILI-3K`](https://doi.org/10.17894/ucph.e37b6615-8635-49cf-819d-eae60e781a96) and [`CHILI-Interpolation`](https://sid.erda.dk/share_redirect/A8kgn0rf3v).
+Click on the following hyperlinks to directly download the raw data for [`CHILI-3K`](https://doi.org/10.17894/ucph.e37b6615-8635-49cf-819d-eae60e781a96) and [`CHILI-Interpolation`](https://www.erda.dk/archives/0dc6456c6b762ec55ccc8742d7a21e0d/published-archive.html).
 
 # Cite
 Kindly cite our publication if you use the dataset or any part of the code:
